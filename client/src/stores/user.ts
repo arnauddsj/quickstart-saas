@@ -3,36 +3,48 @@ import { defineStore } from 'pinia'
 import { trpc } from '@/services/server'
 
 interface UserState {
-  name: string
-  email: string
-  token: string
+  email: string | null
   isLoggedIn: boolean
 }
 
 export const useUserStore = defineStore('user', () => {
   const user = reactive<UserState>({
-    name: '',
-    email: '',
-    token: '',
+    email: null,
     isLoggedIn: false
   })
 
+  function setUser(email: string) {
+    user.email = email
+    user.isLoggedIn = true
+  }
+
   async function fetchUser() {
     try {
-      const result = await trpc.user.fetchUser.query()
-      console.log('User data received:', result)
-      const { name, email, token } = result
-      Object.assign(user, { name, email, token, isLoggedIn: !!token })
-      return token
+      const result = await trpc.auth.getUser.query()
+      if (result && result.email) {
+        setUser(result.email)
+        return result
+      } else {
+        // No user data returned
+        user.email = null
+        user.isLoggedIn = false
+        return null
+      }
     } catch (error) {
       console.error('Failed to fetch user:', error)
-      if (error instanceof Error) {
-        console.error('Error message:', error.message)
-        console.error('Error stack:', error.stack)
-      }
+      user.email = null
+      user.isLoggedIn = false
       return null
     }
   }
 
-  return { user, fetchUser }
+  async function logout() {
+    await trpc.auth.logout.mutate()
+    user.email = null
+    user.isLoggedIn = false
+    // Supprimez également le token du localStorage
+    localStorage.removeItem('authToken')
+  }
+
+  return { user, setUser, fetchUser, logout }
 })

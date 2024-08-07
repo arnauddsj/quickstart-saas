@@ -1,7 +1,6 @@
 import { createTRPCProxyClient, httpBatchLink, TRPCClientError } from "@trpc/client"
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server"
 import type { AppRouter } from "server/src/trpc/router"
-import { useUserStore } from "@/stores/user"
 
 export type RouterInput = inferRouterInputs<AppRouter>
 export type RouterOutput = inferRouterOutputs<AppRouter>
@@ -12,10 +11,11 @@ export const trpc: ReturnType<typeof createTRPCProxyClient<AppRouter>> = createT
   links: [
     httpBatchLink({
       url: endpoint,
-      async headers() {
-        const userStore = useUserStore()
-        const token = userStore.user.token
-        return token ? { authorization: `Bearer ${token}` } : {}
+      fetch(url, options) {
+        return fetch(url, {
+          ...options,
+          credentials: 'include',
+        })
       },
     }),
   ],

@@ -1,12 +1,33 @@
-import { initTRPC } from '@trpc/server'
+import { initTRPC, TRPCError } from '@trpc/server'
 import { CreateFastifyContextOptions } from "@trpc/server/adapters/fastify"
 import { ZodError } from 'zod'
+import { verifyAndGetUser } from '../services/auth'
+import { verify } from 'jsonwebtoken'
+import { CONFIG } from '../config'
 
-export const createContext = async ({ req, res }: CreateFastifyContextOptions) => {
-  return { req, res }
+export const createContext = async (opts: CreateFastifyContextOptions) => {
+  const { req, res } = opts
+  const token = req.cookies[CONFIG.COOKIE_NAME]
+
+  if (!token) {
+    return { req, res, user: null }
+  }
+
+  try {
+    const decoded = verify(token, CONFIG.JWT_SECRET) as { userId: string, token: string }
+    const user = await verifyAndGetUser(decoded.token)
+    return { req, res, user }
+  } catch (error) {
+    console.error('Error verifying token:', error)
+    return { req, res, user: null }
+  }
 }
 
-export const t = initTRPC.context<typeof createContext>().create({
+export const createTRPCContext = (opts: CreateFastifyContextOptions) => {
+  return createContext(opts)
+}
+
+export const t = initTRPC.context<typeof createTRPCContext>().create({
   errorFormatter({ shape, error }) {
     if (error.code === 'BAD_REQUEST' && error.cause instanceof ZodError) {
       return {
@@ -22,8 +43,14 @@ export const t = initTRPC.context<typeof createContext>().create({
   }
 })
 
-
-export const router = t.router
 export const publicProcedure = t.procedure
+export const router = t.router
+
+export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
+  if (!ctx.user) {
+    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' })
+  }
+  return next({ ctx: { ...ctx, user: ctx.user } })
+})
 
 export { default as appRouter, AppRouter } from './router'

@@ -1,0 +1,62 @@
+services:
+    
+  server:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - DATABASE_URL=postgresql://admin:quickstart@postgres/quickstart
+      - MAILHOG_HOST=mailhog
+      - MAILHOG_PORT=1025
+    # depends_on:
+    #   postgres:
+    #     condition: service_healthy
+    #   mailhog:
+    #     condition: service_healthy
+      
+  postgres:
+    image: postgres:15
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: quickstart
+      POSTGRES_DB: quickstart
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # healthcheck:
+    #   test: ["CMD", "pg_isready", "-U", "admin"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 5
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - 1025:1025
+      - 8025:8025
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8025"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 5
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":8090"
+    environment:
+      MINIO_ROOT_USER: quickstart
+      MINIO_ROOT_PASSWORD: quickstart-admin
+    ports:
+      - 8090:8090
+      - 9000:9000
+    volumes:
+      - minio_data:/data
+
+volumes:
+  postgres_data:
+    name: quickstart_postgres_data
+  minio_data: {}
