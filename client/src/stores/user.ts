@@ -1,6 +1,7 @@
 import { reactive } from 'vue'
 import { defineStore } from 'pinia'
 import { trpc } from '@/services/server'
+import Cookies from 'js-cookie'
 
 interface UserState {
   email: string | null
@@ -39,11 +40,17 @@ export const useUserStore = defineStore('user', () => {
   }
 
   async function logout() {
-    await trpc.auth.logout.mutate()
-    user.email = null
-    user.isLoggedIn = false
-    // Supprimez également le token du localStorage
-    localStorage.removeItem('authToken')
+    try {
+      await trpc.auth.logout.mutate()
+      user.email = null
+      user.isLoggedIn = false
+      Cookies.remove(import.meta.env.VITE_COOKIE_NAME, { path: '/' })
+    } catch (error) {
+      console.error('Logout failed:', error)
+      user.email = null
+      user.isLoggedIn = false
+      Cookies.remove(import.meta.env.VITE_COOKIE_NAME, { path: '/' })
+    }
   }
 
   return { user, setUser, fetchUser, logout }

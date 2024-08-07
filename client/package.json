@@ -12,6 +12,8 @@
     "@tanstack/vue-query": "^5.51.21",
     "@trpc/client": "^10.45.2",
     "@trpc/server": "^10.45.2",
+    "@types/js-cookie": "^3.0.6",
+    "js-cookie": "^3.0.5",
     "pinia": "^2.2.0",
     "server": "file:../server",
     "vue": "^3.4.31",
