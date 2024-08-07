@@ -4,8 +4,9 @@ import nodemailer from 'nodemailer'
 import { TRPCError } from '@trpc/server'
 import { User } from '../../entity/User'
 import { AppDataSource } from '../../data-source'
-import { generateAuthToken, verifyAndGetUser } from '../../services/user'
+import { generateAuthToken, verifyAndGetUser } from '../../services/auth'
 import { CONFIG } from '../../config'
+import { verify } from 'jsonwebtoken'
 
 const transporter = nodemailer.createTransport({
   host: 'mailhog',
@@ -15,28 +16,20 @@ const transporter = nodemailer.createTransport({
 export const authRouter = router({
   sendMagicLink: publicProcedure
     .input(z.object({ email: z.string().email() }))
-    .mutation(async ({ input, ctx }) => {
-      console.log('Sending magic link for email:', input.email)
-      console.log('Received input:', input)
-      console.log('Received context:', ctx)
+    .mutation(async ({ input }) => {
       const { email } = input
       const userRepository = AppDataSource.getRepository(User)
       let user = await userRepository.findOne({ where: { email } })
+
       if (!user) {
-        console.log('Creating new user for email:', email)
         user = userRepository.create({ email })
         await userRepository.save(user)
-      } else {
-        console.log('Existing user found for email:', email)
       }
 
-      console.log('Generating auth token for user:', user.id)
       const token = await generateAuthToken(user)
-
-      console.log('Sending email with magic link')
       try {
         await transporter.sendMail({
-          from: 'noreply@example.com',
+          from: 'noreply@quickstart.com',
           to: email,
           subject: 'Your Magic Link',
           text: `Click this link to log in: http://localhost:5173/auth?token=${token}`,
@@ -74,7 +67,13 @@ export const authRouter = router({
     }),
 
   logout: protectedProcedure
-    .mutation(({ ctx }) => {
+    .mutation(async ({ ctx }) => {
+      const token = ctx.req.cookies[CONFIG.COOKIE_NAME]
+      if (token) {
+        const decoded = verify(token, CONFIG.JWT_SECRET) as { userId: string; tokenId: string }
+        const tokenRepository = AppDataSource.getRepository(token)
+        await tokenRepository.delete({ id: decoded.tokenId })
+      }
       ctx.res.clearCookie(CONFIG.COOKIE_NAME)
       return { success: true }
     }),

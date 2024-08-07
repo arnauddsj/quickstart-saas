@@ -34,17 +34,6 @@ server.register(cors, {
 // Replace cookie-parser with fastify cookie plugin
 server.register(fastifyCookie)
 
-// Add a logging middleware to log all incoming requests
-server.addHook('onRequest', (request, reply, done) => {
-  console.log('Received request:', {
-    method: request.method,
-    url: request.url,
-    headers: request.headers,
-    body: request.body
-  })
-  done()
-})
-
 server.register(fastifyTRPCPlugin, {
   prefix: '/trpc',
   trpcOptions: {
@@ -84,7 +73,7 @@ async function main() {
   try {
     await connectWithRetry()
     await server.listen({ port: 3000, host: '0.0.0.0' })
-    console.log('Server listening on http://0.0.0.0:3000')
+    console.log(`Server listening on http://localhost:3000`)
   } catch (err) {
     console.error('Failed to start the server:', err)
     if (err instanceof Error) {

@@ -14,11 +14,11 @@ export const createContext = async (opts: CreateFastifyContextOptions) => {
   }
 
   try {
-    const decoded = verify(token, CONFIG.JWT_SECRET) as { userId: string, token: string }
-    const user = await verifyAndGetUser(decoded.token)
+    const user = await verifyAndGetUser(token)
     return { req, res, user }
   } catch (error) {
     console.error('Error verifying token:', error)
+    res.clearCookie(CONFIG.COOKIE_NAME)
     return { req, res, user: null }
   }
 }
