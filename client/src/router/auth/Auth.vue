@@ -4,6 +4,7 @@ import { useRouter, useRoute } from "vue-router";
 import { trpc } from "@/services/server";
 import { useUserStore } from "@/stores/user";
 import ErrorMessage from "@/components/ErrorMessage.vue";
+import AuthLayout from "@/layouts/AuthLayout.vue";
 
 const email = ref("");
 const errorMessage = ref("");
@@ -39,43 +40,30 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="container">
-    <h1>Login</h1>
-    <form @submit.prevent="sendMagicLink">
-      <input v-model="email" type="email" placeholder="Enter your email" required />
-      <button type="submit">Login with my email</button>
-    </form>
-    <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
-    <ErrorMessage v-if="errorMessage" :message="errorMessage" />
-  </div>
+  <AuthLayout>
+    <div class="auth-container">
+      <h1>Login</h1>
+      <form @submit.prevent="sendMagicLink">
+        <input v-model="email" type="email" placeholder="Enter your email" required />
+        <button type="submit">Login with my email</button>
+      </form>
+      <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
+      <ErrorMessage v-if="errorMessage" :message="errorMessage" />
+    </div>
+  </AuthLayout>
 </template>
 
 <style scoped lang="scss">
-.container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-}
-
 form {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   gap: 1rem;
+  margin-top: 1rem;
 }
 
-input {
-  flex-grow: 1;
-  border: 1px solid var(--primary-color15);
-  border-radius: var(--border-radius);
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-}
-
+input,
 button {
-  padding: 0.6em 1.2em;
-  font-size: 1em;
+  width: 100%;
 }
 
 .success-message {

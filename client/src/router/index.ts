@@ -5,17 +5,22 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
+      path: '',
       name: "home",
-      path: "/",
       component: () => import("./Home.vue"),
       meta: { requiresAuth: true },
     },
     {
-      name: 'auth',
-      path: '/auth',
-      component: () => import('@/router/auth/Auth.vue'),
-      meta: { layout: 'auth' }
+      path: '/account',
+      name: 'account',
+      component: () => import('./UserAccount.vue'),
+      meta: { requiresAuth: true }
     },
+    {
+      path: '/auth',
+      name: 'auth',
+      component: () => import('@/router/auth/Auth.vue'),
+    }
   ],
 })
 

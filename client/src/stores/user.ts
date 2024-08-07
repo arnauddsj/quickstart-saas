@@ -1,4 +1,4 @@
-import { reactive } from 'vue'
+import { reactive, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { trpc } from '@/services/server'
 import Cookies from 'js-cookie'
@@ -14,6 +14,8 @@ export const useUserStore = defineStore('user', () => {
     email: null,
     isLoggedIn: false
   })
+
+  const isLoggedIn = computed(() => user.isLoggedIn)
 
   function setUser(email: string) {
     user.email = email
@@ -60,5 +62,5 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  return { user, setUser, fetchUser, logout }
+  return { user, setUser, fetchUser, logout, isLoggedIn }
 })
