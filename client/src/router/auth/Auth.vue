@@ -3,9 +3,10 @@ import { ref, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { trpc } from "@/services/server";
 import { useUserStore } from "@/stores/user";
+import ErrorMessage from "@/components/ErrorMessage.vue";
 
 const email = ref("");
-const message = ref("");
+const errorMessage = ref("");
 const router = useRouter();
 const route = useRoute();
 const userStore = useUserStore();
@@ -13,9 +14,9 @@ const userStore = useUserStore();
 const sendMagicLink = async () => {
   try {
     await trpc.auth.sendMagicLink.mutate({ email: email.value });
-    message.value = "Magic link sent! Check your email.";
+    errorMessage.value = "Magic link sent! Check your email.";
   } catch (error) {
-    message.value = "Error sending magic link. Please try again.";
+    errorMessage.value = "Error sending magic link. Please try again.";
   }
 };
 
@@ -25,12 +26,10 @@ onMounted(async () => {
     try {
       const result = await trpc.auth.verifyToken.mutate({ token });
       userStore.setUser(result.email);
-      localStorage.setItem("authToken", token);
       router.push("/");
     } catch (error) {
-      message.value = "Invalid or expired token. Please try again.";
+      errorMessage.value = "Invalid or expired token. Please try again.";
       await userStore.logout();
-      localStorage.removeItem("authToken");
     }
   }
 });
@@ -43,6 +42,6 @@ onMounted(async () => {
       <input v-model="email" type="email" placeholder="Enter your email" required />
       <button type="submit">Send Magic Link</button>
     </form>
-    <p v-if="message">{{ message }}</p>
+    <ErrorMessage v-if="errorMessage" :message="errorMessage" />
   </div>
 </template>
