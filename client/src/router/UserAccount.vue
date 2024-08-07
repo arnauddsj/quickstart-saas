@@ -22,9 +22,7 @@ const handleLogout = async () => {
   <DefaultLayout>
     <div class="user-account">
       <h1>User Account</h1>
-      <h2>Welcome, {{ user.email }}!</h2>
       <p>Email: {{ user.email }}</p>
-      <p>This is the members-only area.</p>
       <button @click="handleLogout">Logout</button>
     </div>
   </DefaultLayout>

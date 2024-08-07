@@ -5,6 +5,7 @@ import DefaultLayout from "@/layouts/DefaultLayout.vue";
 <template>
   <DefaultLayout>
     <h1>App Home</h1>
+    <p>This is the members-only area.</p>
   </DefaultLayout>
 </template>
 
