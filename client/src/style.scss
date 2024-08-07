@@ -19,7 +19,7 @@
 }
 
 body {
-    margin: 0;
+  margin: 0;
   display: flex;
   place-items: center;
   min-width: 320px;
@@ -59,12 +59,9 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: var(--primary-color15);
+  background-color: var(--accent-color);
   cursor: pointer;
   transition: border-color 0.25s;
-}
-button:hover {
-  border-color: var(--primary-color15);
 }
 button:focus,
 button:focus-visible {

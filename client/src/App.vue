@@ -6,14 +6,9 @@ import { useUserStore } from "@/stores/user";
 const userStore = useUserStore();
 
 onMounted(async () => {
-  try {
-    const user = await userStore.fetchUser();
-    if (user) {
-      userStore.setUser(user.email);
-    }
-  } catch (error) {
-    console.error("Failed to authenticate user:", error);
-    await userStore.logout();
+  const user = await userStore.fetchUser();
+  if (!user) {
+    console.log("User not authenticated");
   }
 });
 </script>

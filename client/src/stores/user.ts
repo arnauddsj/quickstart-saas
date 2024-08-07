@@ -2,6 +2,7 @@ import { reactive } from 'vue'
 import { defineStore } from 'pinia'
 import { trpc } from '@/services/server'
 import Cookies from 'js-cookie'
+import { TRPCClientError } from '@trpc/client'
 
 interface UserState {
   email: string | null
@@ -26,17 +27,23 @@ export const useUserStore = defineStore('user', () => {
         setUser(result.email)
         return result
       } else {
-        // No user data returned
-        user.email = null
-        user.isLoggedIn = false
+        clearUser()
         return null
       }
     } catch (error) {
+      if (error instanceof TRPCClientError && error.message === 'Not authenticated') {
+        clearUser()
+        return null
+      }
       console.error('Failed to fetch user:', error)
-      user.email = null
-      user.isLoggedIn = false
+      clearUser()
       return null
     }
+  }
+
+  function clearUser() {
+    user.email = null
+    user.isLoggedIn = false
   }
 
   async function logout() {
