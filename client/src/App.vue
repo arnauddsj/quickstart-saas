@@ -16,17 +16,3 @@ onMounted(async () => {
 <template>
   <RouterView />
 </template>
-
-<style lang="scss">
-@use "@/style.scss" as *;
-
-#app {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
-</style>

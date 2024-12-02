@@ -5,6 +5,8 @@ import { trpc } from "@/services/server";
 import { useUserStore } from "@/stores/user";
 import ErrorMessage from "@/components/ErrorMessage.vue";
 import AuthLayout from "@/layouts/AuthLayout.vue";
+import Input from "@/components/ui/input/Input.vue";
+import Button from "@/components/ui/button/Button.vue";
 
 const email = ref("");
 const errorMessage = ref("");
@@ -41,33 +43,14 @@ onMounted(async () => {
 
 <template>
   <AuthLayout>
-    <div class="auth-container">
-      <h1>Login</h1>
-      <form @submit.prevent="sendMagicLink">
-        <input v-model="email" type="email" placeholder="Enter your email" required />
-        <button type="submit">Login with my email</button>
+    <div class="auth-container flex flex-col items-center gap-4 w-full max-w-md">
+      <h1 class="text-2xl font-bold">Login</h1>
+      <form @submit.prevent="sendMagicLink" class="flex flex-col gap-4 mt-4 w-full">
+        <Input v-model="email" type="email" placeholder="Enter your email" required class="w-full" />
+        <Button type="submit" class="w-full">Login with my email</Button>
       </form>
-      <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
+      <p v-if="successMessage" class="text-green-600 mt-4">{{ successMessage }}</p>
       <ErrorMessage v-if="errorMessage" :message="errorMessage" />
     </div>
   </AuthLayout>
 </template>
-
-<style scoped lang="scss">
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-input,
-button {
-  width: 100%;
-}
-
-.success-message {
-  color: green;
-  margin-top: 1rem;
-}
-</style>
