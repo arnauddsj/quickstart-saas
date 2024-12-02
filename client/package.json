@@ -1,7 +1,6 @@
 {
   "name": "quickstart-saas_client",
   "private": true,
-  "version": "0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,26 +8,26 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@tanstack/vue-query": "^5.51.21",
+    "@tanstack/vue-query": "^5.62.0",
     "@trpc/client": "^10.45.2",
     "@trpc/server": "^10.45.2",
     "@types/js-cookie": "^3.0.6",
     "js-cookie": "^3.0.5",
-    "pinia": "^2.2.0",
+    "pinia": "^2.2.8",
     "server": "file:../server",
-    "vue": "^3.4.31",
-    "vue-router": "^4.4.2"
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
   },
   "devDependencies": {
-    "@types/node": "^22.1.0",
-    "@vitejs/plugin-vue": "^5.0.5",
-    "@vue/eslint-config-prettier": "^9.0.0",
-    "@vue/eslint-config-typescript": "^13.0.0",
-    "eslint-plugin-vue": "^9.27.0",
-    "sass": "^1.77.8",
+    "@types/node": "^22.10.1",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/eslint-config-prettier": "^10.1.0",
+    "@vue/eslint-config-typescript": "^14.1.4",
+    "eslint-plugin-vue": "^9.32.0",
+    "sass": "^1.81.0",
     "scss": "^0.2.4",
-    "typescript": "^5.2.2",
-    "vite": "^5.3.4",
-    "vue-tsc": "^2.0.29"
+    "typescript": "^5.7.2",
+    "vite": "^6.0.2",
+    "vue-tsc": "^2.1.10"
   }
 }

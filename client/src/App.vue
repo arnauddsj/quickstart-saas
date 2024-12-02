@@ -2,7 +2,6 @@
 import { RouterView } from "vue-router";
 import { onMounted } from "vue";
 import { useUserStore } from "@/stores/user";
-import DefaultLayout from "@/layouts/DefaultLayout.vue";
 
 const userStore = useUserStore();
 
@@ -19,7 +18,7 @@ onMounted(async () => {
 </template>
 
 <style lang="scss">
-@import "@/style.scss";
+@use "@/style.scss" as *;
 
 #app {
   flex-grow: 1;

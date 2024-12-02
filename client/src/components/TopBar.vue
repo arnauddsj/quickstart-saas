@@ -66,7 +66,7 @@ const navigateToAccount = () => {
       transition: background-color 0.3s ease;
 
       &:hover {
-        background-color: darken(#ebc846, 10%);
+        background-color: var(--accent-color-dark);
       }
     }
   }

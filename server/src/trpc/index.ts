@@ -2,7 +2,6 @@ import { initTRPC, TRPCError } from '@trpc/server'
 import { CreateFastifyContextOptions } from "@trpc/server/adapters/fastify"
 import { ZodError } from 'zod'
 import { verifyAndGetUser } from '../services/auth'
-import { verify } from 'jsonwebtoken'
 import { CONFIG } from '../config'
 
 export const createContext = async (opts: CreateFastifyContextOptions) => {
