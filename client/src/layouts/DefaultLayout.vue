@@ -5,6 +5,7 @@ import TopBar from "@/components/TopBar.vue";
 <template>
   <div class="default-layout">
     <TopBar />
+
     <slot></slot>
   </div>
 </template>

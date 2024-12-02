@@ -1,3 +1,4 @@
+import './index.css'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { VueQueryPlugin as vueQuery } from '@tanstack/vue-query'
