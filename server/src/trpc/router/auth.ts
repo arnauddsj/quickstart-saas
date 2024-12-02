@@ -70,26 +70,22 @@ export const authRouter = router({
     .mutation(async ({ ctx }) => {
       const token = ctx.req.cookies[CONFIG.COOKIE_NAME]
       if (!token) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'No token found' })
+        ctx.res.clearCookie(CONFIG.COOKIE_NAME, { path: '/' })
+        return { success: true }
       }
 
       try {
-        const user = await verifyAndGetUser(token)
-        if (!user) {
-          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid token' })
-        }
-
-        // Delete the token from the database
-        const tokenRepository = AppDataSource.getRepository(Token)
-        await tokenRepository.delete({ user: { id: user.id } })
-
-        // Clear the cookie
         ctx.res.clearCookie(CONFIG.COOKIE_NAME, { path: '/' })
+        
+        const user = await verifyAndGetUser(token)
+        if (user) {
+          const tokenRepository = AppDataSource.getRepository(Token)
+          await tokenRepository.delete({ user: { id: user.id } })
+        }
 
         return { success: true }
       } catch (error) {
-        console.error('Logout error:', error)
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to logout' })
+        return { success: true }
       }
     }),
 

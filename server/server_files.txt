@@ -1,0 +1,884 @@
+PATH: /Users/arnaud/Documents/Github/quickstart-saas/server/docker-compose.yaml
+CONTENT:
+services:
+    
+  server:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - DATABASE_URL=postgresql://admin:quickstart@postgres/quickstart
+      - MAILHOG_HOST=mailhog
+      - MAILHOG_PORT=1025
+    # depends_on:
+    #   postgres:
+    #     condition: service_healthy
+    #   mailhog:
+    #     condition: service_healthy
+      
+  postgres:
+    image: postgres:15
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: quickstart
+      POSTGRES_DB: quickstart
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # healthcheck:
+    #   test: ["CMD", "pg_isready", "-U", "admin"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 5
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - 1025:1025
+      - 8025:8025
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8025"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 5
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":8090"
+    environment:
+      MINIO_ROOT_USER: quickstart
+      MINIO_ROOT_PASSWORD: quickstart-admin
+    ports:
+      - 8090:8090
+      - 9000:9000
+    volumes:
+      - minio_data:/data
+
+volumes:
+  postgres_data:
+    name: quickstart_postgres_data
+  minio_data: {}
+
+PATH: /Users/arnaud/Documents/Github/quickstart-saas/server/Dockerfile
+CONTENT:
+FROM node:20
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm install
+
+COPY . .
+
+EXPOSE 3000
+
+CMD ["npm", "run", "dev"]
+
+PATH: /Users/arnaud/Documents/Github/quickstart-saas/server/server_files.txt
+CONTENT:
+
+
+PATH: /Users/arnaud/Documents/Github/quickstart-saas/server/package.json
+CONTENT:
+{
+  "name": "quickstart-saas_server",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "ts-node src/index.ts",
+    "dev": "nodemon --exec ts-node src/index.ts",
+    "typeorm": "typeorm-ts-node-commonjs",
+    "migration:generate": "npm run typeorm -- migration:generate src/migrations/",
+    "migration:run": "npm run typeorm -- migration:run",
+    "migration:revert": "npm run typeorm -- migration:revert"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "nodemon": "^3.1.7",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.0.1",
+    "@fastify/cors": "^10.0.1",
+    "@trpc/server": "^10.45.2",
+    "@types/cookie-parser": "^1.4.8",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.5",
+    "fastify": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.9.16",
+    "pg": "^8.13.1",
+    "pg-boss": "^10.1.5",
+    "reflect-metadata": "^0.2.2",
+    "trpc": "^0.11.3",
+    "ts-node": "^10.9.2",
+    "typeorm": "^0.3.20",
+    "typeorm-naming-strategies": "^4.1.0",
+    "uuid": "^11.0.3",
+    "winston": "^3.17.0",
+    "zod": "^3.23.8"
+  }
+}
+
+PATH: /Users/arnaud/Documents/Github/quickstart-saas/server/tsconfig.json
+CONTENT:
+{
+  "compilerOptions": {
+    "lib": [
+      "es5",
+      "es6",
+      "es2021"
+    ],
+    "target": "es5",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "sourceMap": true,
+    "skipLibCheck": true
+  }
+}
+
+PATH: /Users/arnaud/Documents/Github/quickstart-saas/server/src/index.ts
+CONTENT:
+import fastify from 'fastify'
+import cors from '@fastify/cors'
+import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify'
+import { appRouter, createContext } from './trpc'
+import type { AppRouter } from './trpc/router'
+import fastifyCookie from '@fastify/cookie'
+import { AppDataSource } from './data-source'
+import dotenv from 'dotenv'
+import PgBoss from 'pg-boss'
+import { initializeTokenCleanup } from './services/tokenCleanup'
+import { CONFIG } from './config'
+
+dotenv.config()
+
+const server = fastify({
+  maxParamLength: 5000,
+})
+
+server.addContentTypeParser('application/json', { parseAs: 'string' }, function (req, body, done) {
+  try {
+    var json = JSON.parse(body as string)
+    done(null, json)
+  } catch (err) {
+    err.statusCode = 400
+    done(err, undefined)
+  }
+})
+
+server.register(cors, {
+  origin: CONFIG.CORS_ORIGINS,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['set-cookie'],
+  preflight: true,
+})
+
+// Replace cookie-parser with fastify cookie plugin
+server.register(fastifyCookie)
+
+server.register(fastifyTRPCPlugin, {
+  prefix: '/trpc',
+  trpcOptions: {
+    router: appRouter,
+    createContext,
+    onError(opts) {
+      const { error, type, path, input, ctx, req } = opts
+      console.error('TRPC Error:', {
+        type,
+        path,
+        input,
+        error: error.message,
+        stack: error.stack
+      })
+    },
+  },
+})
+
+async function connectWithRetry(retries = 5, delay = 5000) {
+  while (retries > 0) {
+    try {
+      await AppDataSource.initialize()
+      console.log("Data Source has been initialized!")
+      await AppDataSource.runMigrations()
+      console.log("Migrations have been run successfully!")
+      return
+    } catch (err) {
+      console.error('Failed to connect to the database or run migrations. Retrying...')
+      retries--
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+  }
+  throw new Error('Unable to connect to the database or run migrations after multiple attempts')
+}
+
+async function main() {
+  try {
+    const boss = new PgBoss(CONFIG.DATABASE_URL)
+    await boss.start()
+    await initializeTokenCleanup(boss)
+    
+    await connectWithRetry()
+    await server.listen({ port: 3000, host: '0.0.0.0' })
+    console.log(`Server listening on http://localhost:3000`)
+  } catch (err) {
+    console.error('Failed to start the server:', err)
+    if (err instanceof Error) {
+      console.error('Error message:', err.message)
+      console.error('Stack trace:', err.stack)
+    }
+    server.log.error(err)
+    process.exit(1)
+  }
+}
+
+main()
+
+// Export type router type signature for client usage
+export type { AppRouter }
+
+PATH: /Users/arnaud/Documents/Github/quickstart-saas/server/src/data-source.ts
+CONTENT:
+import "reflect-metadata"
+import { DataSource } from "typeorm"
+import { SnakeNamingStrategy } from "typeorm-naming-strategies"
+import { join } from "path"
+import dotenv from "dotenv"
+import { CONFIG } from "./config"
+
+// Load environment variables from .env file
+dotenv.config()
+
+console.log("DATABASE_URL:", CONFIG.DATABASE_URL)
+
+export const AppDataSource = new DataSource({
+  type: "postgres",
+  url: CONFIG.DATABASE_URL,
+  synchronize: false,
+  logging: true,
+  migrationsRun: true,
+  namingStrategy: new SnakeNamingStrategy(),
+  entities: [join(__dirname, 'entity', '*.{js,ts}')],
+  migrations: [join(__dirname, 'migrations', '*.{js,ts}')],
+  subscribers: [],
+})
+
+PATH: /Users/arnaud/Documents/Github/quickstart-saas/server/src/config.ts
+CONTENT:
+import { validateEnv } from './utils/validateEnv'
+
+const env = validateEnv()
+
+export const CONFIG = {
+  // Database
+  DATABASE_URL: env.DATABASE_URL,
+
+  // Email
+  MAILHOG_HOST: env.MAILHOG_HOST,
+  MAILHOG_PORT: env.MAILHOG_PORT,
+
+  // Security
+  JWT_SECRET: env.JWT_SECRET,
+  COOKIE_NAME: env.COOKIE_NAME,
+  COOKIE_DOMAIN: env.COOKIE_DOMAIN,
+  COOKIE_SECURE: env.COOKIE_SECURE,
+
+  // Environment
+  NODE_ENV: env.NODE_ENV,
+  SERVER_URL: env.SERVER_URL,
+  CORS_ORIGINS: env.CORS_ORIGINS,
+  IS_PRODUCTION: env.NODE_ENV === 'production',
+  IS_DEVELOPMENT: env.NODE_ENV === 'development',
+  IS_TEST: env.NODE_ENV === 'test',
+
+  // Session
+  SESSION_DURATION: env.SESSION_DURATION,
+} as const
+
+export type Config = typeof CONFIG
+
+PATH: /Users/arnaud/Documents/Github/quickstart-saas/server/src/migrations/1723040678078-add-token-table.ts
+CONTENT:
+import { MigrationInterface, QueryRunner } from "typeorm";
+
+export class AddTokenTable1723040678078 implements MigrationInterface {
+    name = 'AddTokenTable1723040678078'
+
+    public async up(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`CREATE TABLE "token" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "token" character varying NOT NULL, "expires_at" TIMESTAMP NOT NULL, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "user_id" uuid, CONSTRAINT "PK_82fae97f905930df5d62a702fc9" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`ALTER TABLE "token" ADD CONSTRAINT "FK_e50ca89d635960fda2ffeb17639" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+    }
+
+    public async down(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`ALTER TABLE "token" DROP CONSTRAINT "FK_e50ca89d635960fda2ffeb17639"`);
+        await queryRunner.query(`DROP TABLE "token"`);
+    }
+
+}
+
+
+PATH: /Users/arnaud/Documents/Github/quickstart-saas/server/src/migrations/1723039844905-create-users-table.ts
+CONTENT:
+import { MigrationInterface, QueryRunner } from "typeorm";
+
+export class CreateUsersTable1723039844905 implements MigrationInterface {
+    name = 'CreateUsersTable1723039844905'
+
+    public async up(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`CREATE TABLE "user" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "email" character varying NOT NULL, "name" character varying, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "UQ_e12875dfb3b1d92d7d7c5377e22" UNIQUE ("email"), CONSTRAINT "PK_cace4a159ff9f2512dd42373760" PRIMARY KEY ("id"))`);
+    }
+
+    public async down(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`DROP TABLE "user"`);
+    }
+
+}
+
+
+PATH: /Users/arnaud/Documents/Github/quickstart-saas/server/src/trpc/index.ts
+CONTENT:
+import { initTRPC, TRPCError } from '@trpc/server'
+import { CreateFastifyContextOptions } from "@trpc/server/adapters/fastify"
+import { ZodError } from 'zod'
+import { verifyAndGetUser } from '../services/auth'
+import { CONFIG } from '../config'
+
+export const createContext = async (opts: CreateFastifyContextOptions) => {
+  const { req, res } = opts
+  const token = req.cookies[CONFIG.COOKIE_NAME]
+
+  if (!token) {
+    return { req, res, user: null }
+  }
+
+  try {
+    const user = await verifyAndGetUser(token)
+    return { req, res, user }
+  } catch (error) {
+    console.error('Error verifying token:', error)
+    res.clearCookie(CONFIG.COOKIE_NAME)
+    return { req, res, user: null }
+  }
+}
+
+export const createTRPCContext = (opts: CreateFastifyContextOptions) => {
+  return createContext(opts)
+}
+
+export const t = initTRPC.context<typeof createTRPCContext>().create({
+  errorFormatter({ shape, error }) {
+    if (error.code === 'BAD_REQUEST' && error.cause instanceof ZodError) {
+      return {
+        ...shape,
+        message: 'Invalid request.',
+        data: {
+          ...shape.data,
+          fieldErrors: error.cause.flatten().fieldErrors,
+        },
+      }
+    }
+    return shape
+  }
+})
+
+export const publicProcedure = t.procedure
+export const router = t.router
+
+export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
+  if (!ctx.user) {
+    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' })
+  }
+  return next({ ctx: { ...ctx, user: ctx.user } })
+})
+
+export { default as appRouter, AppRouter } from './router'
+
+PATH: /Users/arnaud/Documents/Github/quickstart-saas/server/src/trpc/router/index.ts
+CONTENT:
+import { router, publicProcedure } from "../index"
+import { authRouter } from "./auth"
+import { AppDataSource } from "../../data-source"
+
+export const appRouter = router({
+  auth: authRouter,
+  healthCheck: publicProcedure.query(async () => {
+    try {
+      await AppDataSource.query('SELECT 1')
+      return { status: 'ok', message: 'Server is running and connected to the database' }
+    } catch (error) {
+      console.error('Health check failed:', error)
+      return { status: 'error', message: 'Server is running but database connection failed' }
+    }
+  }),
+})
+
+export type AppRouter = typeof appRouter
+
+export default appRouter
+
+PATH: /Users/arnaud/Documents/Github/quickstart-saas/server/src/trpc/router/auth.ts
+CONTENT:
+import { router, publicProcedure, protectedProcedure } from '../index'
+import { z } from 'zod'
+import nodemailer from 'nodemailer'
+import { TRPCError } from '@trpc/server'
+import { User } from '../../entity/User'
+import { AppDataSource } from '../../data-source'
+import { generateAuthToken, verifyAndGetUser } from '../../services/auth'
+import { CONFIG } from '../../config'
+import { Token } from '../../entity/Token'
+
+const transporter = nodemailer.createTransport({
+  host: 'mailhog',
+  port: 1025,
+})
+
+export const authRouter = router({
+  sendMagicLink: publicProcedure
+    .input(z.object({ email: z.string().email() }))
+    .mutation(async ({ input }) => {
+      const { email } = input
+      const userRepository = AppDataSource.getRepository(User)
+      let user = await userRepository.findOne({ where: { email } })
+
+      if (!user) {
+        user = userRepository.create({ email })
+        await userRepository.save(user)
+      }
+
+      const token = await generateAuthToken(user)
+      try {
+        await transporter.sendMail({
+          from: 'noreply@quickstart.com',
+          to: email,
+          subject: 'Your Magic Link',
+          text: `Click this link to log in: http://localhost:5173/auth?token=${token}`,
+          html: `<p>Click <a href="http://localhost:5173/auth?token=${token}">here</a> to log in.</p>`,
+        })
+        console.log('Email sent successfully')
+      } catch (error) {
+        console.error('Error sending email:', error)
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to send magic link email',
+        })
+      }
+
+      return { success: true, message: 'Magic link sent' }
+    }),
+
+  verifyToken: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const { token } = input
+      const user = await verifyAndGetUser(token)
+      if (user) {
+        const newToken = await generateAuthToken(user)
+        ctx.res.setCookie(CONFIG.COOKIE_NAME, newToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: CONFIG.SESSION_DURATION,
+          path: '/',
+        })
+        return { email: user.email }
+      }
+      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid token' })
+    }),
+
+  logout: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const token = ctx.req.cookies[CONFIG.COOKIE_NAME]
+      if (!token) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'No token found' })
+      }
+
+      try {
+        const user = await verifyAndGetUser(token)
+        if (!user) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid token' })
+        }
+
+        // Delete the token from the database
+        const tokenRepository = AppDataSource.getRepository(Token)
+        await tokenRepository.delete({ user: { id: user.id } })
+
+        // Clear the cookie
+        ctx.res.clearCookie(CONFIG.COOKIE_NAME, { path: '/' })
+
+        return { success: true }
+      } catch (error) {
+        console.error('Logout error:', error)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to logout' })
+      }
+    }),
+
+  getUser: protectedProcedure
+    .query(async ({ ctx }) => {
+      const token = ctx.req.cookies[CONFIG.COOKIE_NAME]
+      if (!token) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'No token found' })
+      }
+
+      const user = await verifyAndGetUser(token)
+      if (user) {
+        return { email: user.email }
+      }
+
+      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid token' })
+    }),
+})
+
+PATH: /Users/arnaud/Documents/Github/quickstart-saas/server/src/entity/Token.ts
+CONTENT:
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn } from "typeorm"
+import { User } from "./User"
+
+@Entity()
+export class Token {
+  @PrimaryGeneratedColumn("uuid")
+  id: string
+
+  @Column()
+  token: string
+
+  @ManyToOne(() => User, user => user.tokens)
+  user: User
+
+  @Column()
+  expiresAt: Date
+
+  @CreateDateColumn()
+  createdAt: Date
+}
+
+PATH: /Users/arnaud/Documents/Github/quickstart-saas/server/src/entity/User.ts
+CONTENT:
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm"
+import { Token } from "./Token"
+
+@Entity()
+export class User {
+  @PrimaryGeneratedColumn("uuid")
+  id: string
+
+  @Column({ unique: true })
+  email: string
+
+  @Column({ nullable: true })
+  name: string
+
+  @OneToMany(() => Token, token => token.user)
+  tokens: Token[]
+
+  @CreateDateColumn()
+  createdAt: Date
+
+  @UpdateDateColumn()
+  updatedAt: Date
+}
+
+PATH: /Users/arnaud/Documents/Github/quickstart-saas/server/src/utils/logger.ts
+CONTENT:
+import winston from 'winston'
+import { CONFIG } from '../config'
+
+const format = CONFIG.IS_PRODUCTION
+  ? winston.format.json()
+  : winston.format.combine(
+      winston.format.colorize(),
+      winston.format.timestamp(),
+      winston.format.printf(
+        ({ timestamp, level, message, ...meta }) =>
+          `${timestamp} [${level}]: ${message} ${
+            Object.keys(meta).length ? JSON.stringify(meta, null, 2) : ''
+          }`
+      )
+    )
+
+export const logger = winston.createLogger({
+  level: CONFIG.IS_PRODUCTION ? 'info' : 'debug',
+  format,
+  transports: [
+    new winston.transports.Console(),
+    ...(CONFIG.IS_PRODUCTION
+      ? [
+          new winston.transports.File({ filename: 'error.log', level: 'error' }),
+          new winston.transports.File({ filename: 'combined.log' }),
+        ]
+      : []),
+  ],
+})
+
+PATH: /Users/arnaud/Documents/Github/quickstart-saas/server/src/utils/validateEnv.ts
+CONTENT:
+import { z } from 'zod'
+
+const envSchema = z.object({
+  // Database
+  DATABASE_URL: z.string().url(),
+
+  // Email
+  MAILHOG_HOST: z.string().default('mailhog'),
+  MAILHOG_PORT: z.coerce.number().default(1025),
+
+  // Security
+  JWT_SECRET: z.string().min(32).default(() => {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_SECRET must be set in production')
+    }
+    return 'development_jwt_secret_at_least_32_chars_long'
+  }),
+  COOKIE_NAME: z.string().default('auth_session'),
+  COOKIE_DOMAIN: z.string().default('localhost'),
+  COOKIE_SECURE: z.coerce.boolean().default(false),
+
+  // Environment
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  SERVER_URL: z.string().url().default('http://localhost:3000'),
+  CORS_ORIGINS: z.string().transform(val => val.split(',')).default('http://localhost:5173'),
+
+  // Session
+  SESSION_DURATION: z.coerce.number().default(7 * 24 * 60 * 60), // 7 days in seconds
+})
+
+export type Env = z.infer<typeof envSchema>
+
+export function validateEnv(): Env {
+  try {
+    const parsed = envSchema.parse(process.env)
+
+    // Additional validation for production environment
+    if (parsed.NODE_ENV === 'production') {
+      if (!parsed.COOKIE_SECURE) {
+        throw new Error('COOKIE_SECURE must be true in production')
+      }
+      
+      if (parsed.COOKIE_DOMAIN === 'localhost') {
+        throw new Error('COOKIE_DOMAIN must be set in production')
+      }
+      
+      if (parsed.JWT_SECRET === 'development_jwt_secret_at_least_32_chars_long') {
+        throw new Error('Default JWT_SECRET cannot be used in production')
+      }
+    }
+
+    return parsed
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      console.error('❌ Invalid environment variables:')
+      console.error(JSON.stringify(error.format(), null, 2))
+      process.exit(1)
+    }
+    throw error
+  }
+}
+
+PATH: /Users/arnaud/Documents/Github/quickstart-saas/server/src/services/tokenCleanup.ts
+CONTENT:
+import PgBoss from 'pg-boss'
+import { AppDataSource } from '../data-source'
+import { Token } from '../entity/Token'
+import { logger } from '../utils/logger'
+
+export const cleanupTokensQueue = (boss: PgBoss) => {
+  const name = 'auth/cleanup-tokens'
+  const cronOptions = {
+    cron: '0 3 * * *', // Run daily at 3 AM
+    singletonKey: 'cleanup-tokens', // Ensure only one instance runs
+    retentionDays: 7, // Keep job history for a week
+  }
+  
+  const processor = async () => {
+    const tokenRepository = AppDataSource.getRepository(Token)
+    try {
+      const result = await tokenRepository
+        .createQueryBuilder()
+        .delete()
+        .from(Token)
+        .where('expires_at < :now', { now: new Date() })
+        .execute()
+      
+      logger.info('Token cleanup completed', { 
+        deletedCount: result.affected,
+        timestamp: new Date().toISOString()
+      })
+
+      return result.affected
+    } catch (error) {
+      logger.error('Token cleanup failed', { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      })
+      throw error
+    }
+  }
+
+  return { name, processor, options: cronOptions }
+}
+
+export async function initializeTokenCleanup(boss: PgBoss) {
+  const queue = cleanupTokensQueue(boss)
+  
+  // Register the worker
+  await boss.work(queue.name, queue.processor)
+  
+  // Schedule the cron job
+  await boss.schedule(queue.name, queue.options.cron, null, queue.options)
+  
+  logger.info('Token cleanup job scheduled', {
+    queue: queue.name,
+    cron: queue.options.cron,
+    timestamp: new Date().toISOString()
+  })
+}
+
+PATH: /Users/arnaud/Documents/Github/quickstart-saas/server/src/services/rateLimit.ts
+CONTENT:
+import PgBoss from 'pg-boss'
+import { FastifyInstance } from 'fastify'
+import { CONFIG } from '../config'
+
+interface RateLimitJob {
+  data: {
+    attempts: number;
+  };
+}
+
+interface MagicLinkBody {
+  email?: string;
+}
+
+export class RateLimitService {
+  private static boss: PgBoss
+
+  static async initialize(connectionString: string) {
+    this.boss = new PgBoss(connectionString)
+    await this.boss.start()
+  }
+
+  static async checkRateLimit(key: string): Promise<{ allowed: boolean; resetTime?: Date }> {
+    const windowMs = 60 * 60 * 1000 // 1 hour in milliseconds
+    const maxAttempts = CONFIG.IS_PRODUCTION ? 3 : 100
+
+    try {
+      // Try to create a singleton job - it will fail if one exists
+      const job = await this.boss.send({
+        name: `ratelimit:${key}`,
+        data: { attempts: 1 },
+        options: {
+          singletonKey: key,
+          singletonSeconds: 3600, // 1 hour
+          retentionSeconds: 3600,
+        },
+      })
+
+      if (job) {
+        // First attempt for this key
+        return { allowed: true }
+      }
+
+      // Job exists, increment the counter
+      const currentJob = await this.boss.getJobById(`ratelimit:${key}`, job) as RateLimitJob
+      const attempts = (currentJob?.data?.attempts || 0) + 1
+
+      if (attempts > maxAttempts) {
+        return {
+          allowed: false,
+          resetTime: new Date(Date.now() + windowMs),
+        }
+      }
+
+      // Update attempts count
+      await this.boss.complete(`ratelimit:${key}`, job)
+      return { allowed: true }
+    } catch (error) {
+      console.error('Rate limit check failed:', error)
+      // Fail open in case of errors
+      return { allowed: true }
+    }
+  }
+}
+
+export async function configureRateLimit(app: FastifyInstance) {
+  // Initialize rate limit service
+  await RateLimitService.initialize(CONFIG.DATABASE_URL)
+
+  app.addHook('preHandler', async (request, reply) => {
+    // Only rate limit specific endpoints
+    if (request.url.includes('/trpc/auth.sendMagicLink')) {
+      const email = (request.body as MagicLinkBody)?.email
+      const key = email ? `${request.ip}-${email}` : request.ip
+
+      const { allowed, resetTime } = await RateLimitService.checkRateLimit(key)
+
+      if (!allowed) {
+        reply.status(429).send({
+          code: 429,
+          error: 'Too Many Requests',
+          message: `Too many attempts. Please try again after ${resetTime?.toISOString()}`,
+        })
+      }
+    }
+  })
+}
+
+PATH: /Users/arnaud/Documents/Github/quickstart-saas/server/src/services/auth.ts
+CONTENT:
+import { AppDataSource } from "../data-source"
+import { User } from "../entity/User"
+import { sign, verify } from "jsonwebtoken"
+import crypto from "crypto"
+import { CONFIG } from "../config"
+import { Token } from "../entity/Token"
+
+export async function generateAuthToken(user: User): Promise<string> {
+  const tokenRepository = AppDataSource.getRepository(Token)
+  const tokenValue = crypto.randomBytes(32).toString("hex")
+  const expiresAt = new Date(Date.now() + CONFIG.SESSION_DURATION * 1000)
+
+  const tokenEntity = await tokenRepository.save({
+    token: tokenValue,
+    user,
+    expiresAt,
+  })
+
+  return sign({ userId: user.id, tokenId: tokenEntity.id }, CONFIG.JWT_SECRET, { expiresIn: CONFIG.SESSION_DURATION })
+}
+
+export async function verifyAndGetUser(token: string): Promise<User | null> {
+  try {
+    const decoded = verify(token, CONFIG.JWT_SECRET) as { userId: string; tokenId: string }
+    const tokenRepository = AppDataSource.getRepository(Token)
+    const userRepository = AppDataSource.getRepository(User)
+
+    const storedToken = await tokenRepository.findOne({
+      where: { id: decoded.tokenId },
+      relations: ["user"],
+    })
+
+    if (!storedToken || storedToken.expiresAt < new Date()) {
+      return null
+    }
+
+    const user = await userRepository.findOne({ where: { id: decoded.userId } })
+    return user || null
+  } catch (error) {
+    console.error("Token verification failed:", error)
+    return null
+  }
+}
+

@@ -6,8 +6,11 @@ import type { AppRouter } from './trpc/router'
 import fastifyCookie from '@fastify/cookie'
 import { AppDataSource } from './data-source'
 import dotenv from 'dotenv'
+import PgBoss from 'pg-boss'
+import { initializeTokenCleanup } from './services/tokenCleanup'
+import { CONFIG } from './config'
+import { logger } from './utils/logger'
 
-// Load environment variables
 dotenv.config()
 
 const server = fastify({
@@ -25,10 +28,12 @@ server.addContentTypeParser('application/json', { parseAs: 'string' }, function 
 })
 
 server.register(cors, {
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  origin: CONFIG.CORS_ORIGINS,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['set-cookie'],
+  preflight: true,
 })
 
 // Replace cookie-parser with fastify cookie plugin
@@ -40,11 +45,20 @@ server.register(fastifyTRPCPlugin, {
     router: appRouter,
     createContext,
     onError(opts) {
-      const { error, type, path, input, ctx, req } = opts
-      console.error('TRPC Error:', {
-        type,
+      const { error, path } = opts
+      
+      // Skip logging for expected auth-related errors
+      if (
+        error.message === 'Not authenticated' || 
+        error.message === 'No token found' ||
+        error.message === 'Invalid token'
+      ) {
+        return;
+      }
+
+      // Log other errors
+      logger.error('TRPC Error:', {
         path,
-        input,
         error: error.message,
         stack: error.stack
       })
@@ -71,16 +85,42 @@ async function connectWithRetry(retries = 5, delay = 5000) {
 
 async function main() {
   try {
+    const boss = new PgBoss({
+      connectionString: CONFIG.DATABASE_URL,
+      max: 1, // Limit connection pool size for the job queue
+      application_name: 'token-cleanup-worker',
+      schema: 'pgboss'
+    })
+
+    // Listen for PgBoss errors
+    boss.on('error', error => {
+      logger.error('PgBoss error:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      })
+    })
+
+    // Start PgBoss and wait for it to be ready
+    await boss.start()
+    
+    // Create the queue before scheduling
+    await boss.createQueue('auth/cleanup-tokens')
+    
+    // Initialize token cleanup after PgBoss is started
+    await initializeTokenCleanup(boss)
+    
+    // Connect to the main database
     await connectWithRetry()
+    
+    // Start the server
     await server.listen({ port: 3000, host: '0.0.0.0' })
-    console.log(`Server listening on http://localhost:3000`)
+    logger.info('Server listening on http://localhost:3000')
   } catch (err) {
-    console.error('Failed to start the server:', err)
-    if (err instanceof Error) {
-      console.error('Error message:', err.message)
-      console.error('Stack trace:', err.stack)
-    }
-    server.log.error(err)
+    logger.error('Failed to start the server:', {
+      error: err instanceof Error ? err.message : 'Unknown error',
+      stack: err instanceof Error ? err.stack : undefined,
+      timestamp: new Date().toISOString()
+    })
     process.exit(1)
   }
 }

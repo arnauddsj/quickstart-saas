@@ -1,7 +1,31 @@
+import { validateEnv } from './utils/validateEnv'
+
+const env = validateEnv()
+
 export const CONFIG = {
-  JWT_SECRET: process.env.JWT_SECRET || "your-secret-key",
-  SESSION_DURATION: 7 * 24 * 60 * 60, // 7 days in seconds
-  COOKIE_NAME: 'auth_session',
-  DATABASE_URL: process.env.DATABASE_URL ?? 'postgresql://admin:quickstart@localhost/quickstart',
-  SERVER_URL: process.env.SERVER_URL ?? 'http://localhost:3000',
-}
+  // Database
+  DATABASE_URL: env.DATABASE_URL,
+
+  // Email
+  MAILHOG_HOST: env.MAILHOG_HOST,
+  MAILHOG_PORT: env.MAILHOG_PORT,
+
+  // Security
+  JWT_SECRET: env.JWT_SECRET,
+  COOKIE_NAME: env.COOKIE_NAME,
+  COOKIE_DOMAIN: env.COOKIE_DOMAIN,
+  COOKIE_SECURE: env.COOKIE_SECURE,
+
+  // Environment
+  NODE_ENV: env.NODE_ENV,
+  SERVER_URL: env.SERVER_URL,
+  CORS_ORIGINS: env.CORS_ORIGINS,
+  IS_PRODUCTION: env.NODE_ENV === 'production',
+  IS_DEVELOPMENT: env.NODE_ENV === 'development',
+  IS_TEST: env.NODE_ENV === 'test',
+
+  // Session
+  SESSION_DURATION: env.SESSION_DURATION,
+} as const
+
+export type Config = typeof CONFIG

@@ -3,6 +3,7 @@ import { CreateFastifyContextOptions } from "@trpc/server/adapters/fastify"
 import { ZodError } from 'zod'
 import { verifyAndGetUser } from '../services/auth'
 import { CONFIG } from '../config'
+import { handleError } from '../utils/errorHandler'
 
 export const createContext = async (opts: CreateFastifyContextOptions) => {
   const { req, res } = opts
@@ -16,7 +17,10 @@ export const createContext = async (opts: CreateFastifyContextOptions) => {
     const user = await verifyAndGetUser(token)
     return { req, res, user }
   } catch (error) {
-    console.error('Error verifying token:', error)
+    // Only log unexpected errors, not authentication-related ones
+    if (!(error instanceof TRPCError) || error.code !== 'UNAUTHORIZED') {
+      console.error('Error verifying token:', error)
+    }
     res.clearCookie(CONFIG.COOKIE_NAME)
     return { req, res, user: null }
   }
@@ -28,17 +32,25 @@ export const createTRPCContext = (opts: CreateFastifyContextOptions) => {
 
 export const t = initTRPC.context<typeof createTRPCContext>().create({
   errorFormatter({ shape, error }) {
+    const sanitizedError = handleError(error)
+    
     if (error.code === 'BAD_REQUEST' && error.cause instanceof ZodError) {
       return {
         ...shape,
-        message: 'Invalid request.',
+        message: 'Invalid input provided',
         data: {
           ...shape.data,
-          fieldErrors: error.cause.flatten().fieldErrors,
+          fieldErrors: CONFIG.IS_PRODUCTION 
+            ? 'Validation failed'
+            : error.cause.flatten().fieldErrors,
         },
       }
     }
-    return shape
+
+    return {
+      ...shape,
+      message: sanitizedError.message,
+    }
   }
 })
 
