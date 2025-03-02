@@ -1,5 +1,5 @@
 {
-  "name": "quickstart-saas_server",
+  "name": "server",
   "private": true,
   "main": "index.js",
   "scripts": {
