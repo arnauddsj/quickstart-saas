@@ -7,23 +7,30 @@ import { AppDataSource } from '../../data-source'
 import { generateAuthToken, verifyAndGetUser } from '../../services/auth'
 import { CONFIG } from '../../config'
 import { Token } from '../../entity/Token'
+import { AuditLogService, AuditEventType } from '../../services/auditLog'
 
 const transporter = nodemailer.createTransport({
-  host: 'mailhog',
-  port: 1025,
+  host: CONFIG.MAILHOG_HOST,
+  port: CONFIG.MAILHOG_PORT,
 })
 
 export const authRouter = router({
   sendMagicLink: publicProcedure
     .input(z.object({ email: z.string().email() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const { email } = input
       const userRepository = AppDataSource.getRepository(User)
       let user = await userRepository.findOne({ where: { email } })
+      let isNewUser = false
 
       if (!user) {
-        user = userRepository.create({ email })
+        // Create new user with default member role
+        user = userRepository.create({ 
+          email,
+          role: 'member' 
+        })
         await userRepository.save(user)
+        isNewUser = true
       }
 
       const token = await generateAuthToken(user)
@@ -35,7 +42,20 @@ export const authRouter = router({
           text: `Click this link to log in: http://localhost:5173/auth?token=${token}`,
           html: `<p>Click <a href="http://localhost:5173/auth?token=${token}">here</a> to log in.</p>`,
         })
-        console.log('Email sent successfully')
+        
+        // Audit log the magic link request
+        await AuditLogService.log({
+          eventType: AuditEventType.MAGIC_LINK_REQUESTED,
+          userId: user.id,
+          ipAddress: ctx.req.ip,
+          userAgent: ctx.req.headers['user-agent'] as string,
+          metadata: {
+            email,
+            isNewUser
+          }
+        })
+        
+        return { success: true, message: 'Magic link sent' }
       } catch (error) {
         console.error('Error sending email:', error)
         throw new TRPCError({
@@ -43,27 +63,65 @@ export const authRouter = router({
           message: 'Failed to send magic link email',
         })
       }
-
-      return { success: true, message: 'Magic link sent' }
     }),
 
   verifyToken: publicProcedure
     .input(z.object({ token: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const { token } = input
-      const user = await verifyAndGetUser(token)
-      if (user) {
-        const newToken = await generateAuthToken(user)
-        ctx.res.setCookie(CONFIG.COOKIE_NAME, newToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: CONFIG.SESSION_DURATION,
-          path: '/',
+      try {
+        const user = await verifyAndGetUser(token)
+        if (user) {
+          const newToken = await generateAuthToken(user)
+          ctx.res.setCookie(CONFIG.COOKIE_NAME, newToken, {
+            httpOnly: true,
+            secure: CONFIG.COOKIE_SECURE,
+            sameSite: 'lax',
+            maxAge: CONFIG.SESSION_DURATION,
+            path: '/',
+            domain: CONFIG.COOKIE_DOMAIN
+          })
+          
+          // Audit log the successful login
+          await AuditLogService.log({
+            eventType: AuditEventType.LOGIN_SUCCESS,
+            userId: user.id,
+            ipAddress: ctx.req.ip,
+            userAgent: ctx.req.headers['user-agent'] as string,
+          })
+          
+          return { 
+            id: user.id,
+            email: user.email, 
+            name: user.name,
+            role: user.role
+          }
+        }
+        
+        // Audit log the failed token verification
+        await AuditLogService.log({
+          eventType: AuditEventType.LOGIN_FAILURE,
+          ipAddress: ctx.req.ip,
+          userAgent: ctx.req.headers['user-agent'] as string,
+          metadata: {
+            reason: 'Invalid token'
+          }
         })
-        return { email: user.email }
+        
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid token' })
+      } catch (error) {
+        // Audit log the failed login
+        await AuditLogService.log({
+          eventType: AuditEventType.LOGIN_FAILURE,
+          ipAddress: ctx.req.ip,
+          userAgent: ctx.req.headers['user-agent'] as string,
+          metadata: {
+            error: error instanceof Error ? error.message : 'Unknown error'
+          }
+        })
+        
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid token' })
       }
-      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid token' })
     }),
 
   logout: protectedProcedure
@@ -81,6 +139,14 @@ export const authRouter = router({
         if (user) {
           const tokenRepository = AppDataSource.getRepository(Token)
           await tokenRepository.delete({ user: { id: user.id } })
+          
+          // Audit log the logout
+          await AuditLogService.log({
+            eventType: AuditEventType.LOGOUT,
+            userId: user.id,
+            ipAddress: ctx.req.ip,
+            userAgent: ctx.req.headers['user-agent'] as string,
+          })
         }
 
         return { success: true }
@@ -98,7 +164,12 @@ export const authRouter = router({
 
       const user = await verifyAndGetUser(token)
       if (user) {
-        return { email: user.email }
+        return { 
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role
+        }
       }
 
       throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid token' })

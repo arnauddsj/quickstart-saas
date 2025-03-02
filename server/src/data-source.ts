@@ -11,7 +11,7 @@ dotenv.config()
 const baseConfig: Partial<DataSourceOptions> = {
   type: "postgres",
   url: CONFIG.DATABASE_URL,
-  synchronize: false,
+  synchronize: true,
   logging: !CONFIG.IS_PRODUCTION,
   namingStrategy: new SnakeNamingStrategy(),
   entities: [join(__dirname, 'entity', '*.{js,ts}')],

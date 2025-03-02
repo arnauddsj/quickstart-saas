@@ -1,20 +1,10 @@
-import './assets/index.css'
 import { createApp } from 'vue'
-import { createPinia } from 'pinia'
-import { VueQueryPlugin as vueQuery } from '@tanstack/vue-query'
+import App from './App.vue'
 import router from './router'
-import App from '@/App.vue'
+import { pinia } from './stores'
+import './style.css'
 
 const app = createApp(App)
-app.use(vueQuery, {
-  queryClientConfig: {
-    defaultOptions: {
-      queries: {
-        refetchOnWindowFocus: false,
-      },
-    },
-  },
-})
+app.use(pinia)
 app.use(router)
-app.use(createPinia())
 app.mount('#app')

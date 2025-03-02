@@ -10,11 +10,27 @@ import PgBoss from 'pg-boss'
 import { initializeTokenCleanup } from './services/tokenCleanup'
 import { CONFIG } from './config'
 import { logger } from './utils/logger'
+import { configureRateLimit } from './services/rateLimit'
+import { AuditLogService } from './services/auditLog'
 
 dotenv.config()
 
 const server = fastify({
   maxParamLength: 5000,
+  logger: {
+    level: CONFIG.IS_PRODUCTION ? 'info' : 'debug',
+    serializers: {
+      req(request) {
+        return {
+          method: request.method,
+          url: request.url,
+          hostname: request.hostname,
+          remoteAddress: request.ip,
+          remotePort: request.socket?.remotePort,
+        }
+      }
+    }
+  }
 })
 
 server.addContentTypeParser('application/json', { parseAs: 'string' }, function (req, body, done) {
@@ -36,7 +52,7 @@ server.register(cors, {
   preflight: true,
 })
 
-// Replace cookie-parser with fastify cookie plugin
+// Register cookie plugin
 server.register(fastifyCookie)
 
 server.register(fastifyTRPCPlugin, {
@@ -45,7 +61,7 @@ server.register(fastifyTRPCPlugin, {
     router: appRouter,
     createContext,
     onError(opts) {
-      const { error, path } = opts
+      const { error, path, type, ctx } = opts
       
       // Skip logging for expected auth-related errors
       if (
@@ -59,8 +75,10 @@ server.register(fastifyTRPCPlugin, {
       // Log other errors
       logger.error('TRPC Error:', {
         path,
+        type,
         error: error.message,
-        stack: error.stack
+        stack: error.stack,
+        userId: ctx?.user?.id
       })
     },
   },
@@ -70,12 +88,15 @@ async function connectWithRetry(retries = 5, delay = 5000) {
   while (retries > 0) {
     try {
       await AppDataSource.initialize()
-      console.log("Data Source has been initialized!")
+      logger.info("Data Source has been initialized!")
       await AppDataSource.runMigrations()
-      console.log("Migrations have been run successfully!")
+      logger.info("Migrations have been run successfully!")
       return
     } catch (err) {
-      console.error('Failed to connect to the database or run migrations. Retrying...')
+      logger.error('Failed to connect to the database or run migrations. Retrying...', {
+        error: err instanceof Error ? err.message : 'Unknown error',
+        retryCount: retries
+      })
       retries--
       await new Promise(resolve => setTimeout(resolve, delay))
     }
@@ -87,8 +108,8 @@ async function main() {
   try {
     const boss = new PgBoss({
       connectionString: CONFIG.DATABASE_URL,
-      max: 1, // Limit connection pool size for the job queue
-      application_name: 'token-cleanup-worker',
+      max: 3, // Slightly larger pool for multiple job types
+      application_name: 'pgboss-worker',
       schema: 'pgboss'
     })
 
@@ -103,14 +124,26 @@ async function main() {
     // Start PgBoss and wait for it to be ready
     await boss.start()
     
-    // Create the queue before scheduling
+    // Initialize all services that use PgBoss
+    // Create queues before scheduling
     await boss.createQueue('auth/cleanup-tokens')
     
-    // Initialize token cleanup after PgBoss is started
+    // Initialize token cleanup service
     await initializeTokenCleanup(boss)
+    
+    // Initialize the audit log service
+    await AuditLogService.initialize(boss)
     
     // Connect to the main database
     await connectWithRetry()
+    
+    // Configure rate limiting
+    await configureRateLimit(server)
+    
+    // Add health check endpoint
+    server.get('/health', async () => {
+      return { status: 'ok', timestamp: new Date().toISOString() }
+    })
     
     // Start the server
     await server.listen({ port: 3000, host: '0.0.0.0' })

@@ -1,18 +1,13 @@
 <script setup lang="ts">
-import { RouterView } from "vue-router";
-import { onMounted } from "vue";
-import { useUserStore } from "@/stores/user";
-
-const userStore = useUserStore();
-
-onMounted(async () => {
-  const user = await userStore.fetchUser();
-  if (!user) {
-    console.log("User not authenticated");
-  }
-});
+// The main app component simply contains the router view
 </script>
 
 <template>
-  <RouterView />
+  <div class="min-h-screen bg-gray-50">
+    <router-view />
+  </div>
 </template>
+
+<style scoped>
+
+</style>
