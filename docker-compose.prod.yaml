@@ -30,7 +30,9 @@ services:
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?set STRIPE_SECRET_KEY in .env}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?set STRIPE_WEBHOOK_SECRET in .env}
       STRIPE_PRICE_PRO_MONTHLY: ${STRIPE_PRICE_PRO_MONTHLY:-price_pro_monthly_placeholder}
-      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+      SENTRY_RELEASE: ${SOURCE_COMMIT:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     depends_on:
       postgres:
@@ -43,10 +45,25 @@ services:
     build:
       context: .
       dockerfile: client/Dockerfile
+      args:
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+        VITE_SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+        VITE_GLITCHTIP_URL: ${VITE_GLITCHTIP_URL:-}
+        SOURCE_COMMIT: ${SOURCE_COMMIT:-}
+        SENTRY_URL: ${SENTRY_URL:-}
+        SENTRY_ORG: ${SENTRY_ORG:-}
+        SENTRY_PROJECT: ${SENTRY_PROJECT:-}
+      secrets:
+        - SENTRY_AUTH_TOKEN
     ports:
       - '${CLIENT_PORT:-80}:80'
     environment:
       API_UPSTREAM: server:3000
+      GLITCHTIP_ORIGIN: ${GLITCHTIP_ORIGIN:-}
     depends_on:
       server:
         condition: service_healthy
+
+secrets:
+  SENTRY_AUTH_TOKEN:
+    environment: SENTRY_AUTH_TOKEN
