@@ -44,10 +44,14 @@ from private addresses; the server port must never be published directly.
 headers at all until these were added. `style-src` allows `'unsafe-inline'` because Vue
 and reka-ui set inline styles. A script or image host added to the app must be added to
 the policy in `nginx.conf.template`, or it is blocked silently in production only.
+`GLITCHTIP_ORIGIN` is substituted into `connect-src` in both copies of the policy (the
+`/index.html` block repeats every header because nginx drops inherited `add_header`s);
+without it the browser SDK's requests are blocked.
 
 ## Boot order is migrate, jobs, listen
 
-`index.ts` runs `runMigrations()`, then `startBoss()`, then `app.listen()`. A migration
+`index.ts` runs `runMigrations()`, then `startBoss()`, then `app.listen()`, then starts
+the watchdog. `instrument.ts` is loaded before all of it by `node --import`. A migration
 failure exits before the port opens; the platform sees a container that never becomes
 healthy, not an error page. Read the log for `migration failed`.
 
@@ -85,11 +89,43 @@ laptop.
 with HTTPS it must be `true`, and the server trusts `X-Forwarded-Proto` because Fastify
 runs with `trustProxy: true`.
 
+## Error tracking lives in GlitchTip
+
+GlitchTip runs outside this repo on shared infrastructure, on a different host from the
+apps, so that it can report an app host going away. Per app:
+
+1. **Project.** Create one GlitchTip project for client and server together. Set
+   `SENTRY_DSN` on the server service and `VITE_SENTRY_DSN` as a client build variable,
+   both to its DSN. Set `SENTRY_ENVIRONMENT` per deployment.
+2. **Alerts.** Add an alert rule on new issues with two recipients: a Discord webhook
+   and email.
+3. **Uptime.** Add an uptime monitor on `https://<public host>/health/ready`, alerting to
+   the same recipients.
+4. **Browser access.**
+   - Set `GLITCHTIP_ORIGIN` (e.g. `https://glitchtip.example.com`) on the client service
+     for the CSP.
+   - Set `VITE_GLITCHTIP_URL` to the project's issue list for the admin link.
+5. **Source maps.**
+   - Create an auth token with `project:releases`.
+   - Set `SENTRY_URL`, `SENTRY_ORG` and `SENTRY_PROJECT` as client build variables.
+   - Provide `SENTRY_AUTH_TOKEN` as a Docker build secret; Compose reads it from the
+     environment.
+
+   With the token set, Vite emits hidden source maps. `@sentry/vite-plugin` uploads them
+   tagged with the release and deletes them. The Dockerfile then fails the build if any
+   `.map` is left, so maps never ship in the nginx image. Without the token, no maps are
+   generated.
+
+The release is `SOURCE_COMMIT`, which Coolify provides. It becomes `VITE_SENTRY_RELEASE`
+in the client build and `SENTRY_RELEASE` on the server. The server needs no upload:
+`tsc` emits source maps next to `dist/` and node runs with `--enable-source-maps`.
+
 ## What lives in Coolify, not in the repo
 
 - The environment variables marked REQUIRED in `server/.env.example`.
 - The health check path: `/health/ready` on port 3000 for the server service.
 - A Stripe webhook endpoint pointing at `https://<public host>/webhooks/stripe`.
+- The GlitchTip variables and build secret above.
 - Scheduled tasks, if any; the template needs none because pg-boss schedules in-process.
 
 CI (`.github/workflows/ci.yml`) builds both images on every push to prove they build; it

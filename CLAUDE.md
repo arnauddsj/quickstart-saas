@@ -14,9 +14,11 @@ belongs in a doc (see [Comments](#comments)).
 - Node 24 (`.nvmrc`), pnpm 11 workspace (`client`, `server`), TypeScript 6.0 (pinned
   below 6.1 by typescript-eslint; TypeScript 7 is a TODO item).
 - Server: Fastify 5, tRPC 11, better-auth 1.7 (magic link, admin, organization), Drizzle
-  0.45 on Postgres 17, pg-boss 12, pino, zod 4, Stripe SDK 22, nodemailer or Loops.
+  0.45 on Postgres 17, pg-boss 12, pino, zod 4, Stripe SDK 22, nodemailer or Loops,
+  Sentry SDK 10 reporting to self-hosted GlitchTip.
 - Client: Vue 3.5, Vite 8, vue-router 5, TanStack Vue Query 5 for server state, Pinia 4
-  for UI state only, Tailwind 4, shadcn-vue on reka-ui, lucide icons, vue-sonner.
+  for UI state only, Tailwind 4, shadcn-vue on reka-ui, lucide icons, vue-sonner,
+  @sentry/vue.
 - Quality gates: ESLint 10 flat + Prettier, vitest 5 unit specs in both packages, vitest
   integration specs on real Postgres, Playwright E2E, GitHub Actions, pre-commit via
   simple-git-hooks. What each layer proves: [`docs/testing.md`](docs/testing.md).

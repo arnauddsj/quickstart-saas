@@ -28,7 +28,7 @@ uses `${VAR:?message}` so Compose fails by name before a container even starts.
 
 ## An empty string is unset
 
-Compose passes `${DISCORD_WEBHOOK_URL:-}` as an empty string when the host does not set
+Compose passes `${SENTRY_DSN:-}` as an empty string when the host does not set
 it, and `z.url().optional()` rejects `""`. `parseEnv` therefore maps every empty value to
 `undefined` before validation, so an optional variable left blank in Coolify or in
 `.env` behaves as absent. The production stack refused to boot on exactly this before the
@@ -53,22 +53,23 @@ cookie, and the cookie lands on a host the browser never visits.
 
 ## The full list
 
-| Variable                                                                        | Default                                  | Notes                                                                  |
-| ------------------------------------------------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------- |
-| `NODE_ENV`                                                                      | `development`                            | `production` flips every rule above.                                   |
-| `PORT`                                                                          | `3000`                                   |                                                                        |
-| `DATABASE_URL`                                                                  | none, required                           | pg connection string; also read by `drizzle.config.ts`.                |
-| `PUBLIC_URL`                                                                    | `http://localhost:5173`                  | See above.                                                             |
-| `CORS_ORIGINS`                                                                  | `http://localhost:5173`                  | Split on commas, trimmed.                                              |
-| `AUTH_SECRET`                                                                   | dev placeholder                          | 32+ chars. Rotating it signs everyone out.                             |
-| `COOKIE_SECURE`                                                                 | `false`                                  | Must be `true` in production.                                          |
-| `EMAIL_PROVIDER`                                                                | `smtp`                                   | `smtp` or `loops`; no fallback between them, see [email.md](email.md). |
-| `EMAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`                                          | `noreply@localhost`, `localhost`, `1025` | Mailpit locally.                                                       |
-| `LOOPS_API_KEY`, `LOOPS_MAGIC_LINK_TEMPLATE_ID`, `LOOPS_INVITATION_TEMPLATE_ID` | unset                                    | Required together when `EMAIL_PROVIDER=loops`.                         |
-| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`                                    | dev placeholders                         | See [billing.md](billing.md).                                          |
-| `STRIPE_PRICE_PRO_MONTHLY`                                                      | placeholder id                           | Not a secret; maps to `PLANS.PRO`.                                     |
-| `DISCORD_WEBHOOK_URL`                                                           | unset                                    | Optional, see [error-reporting.md](error-reporting.md).                |
-| `LOG_LEVEL`                                                                     | `debug` locally, `info` in production    | pino level.                                                            |
+| Variable                                                                        | Default                                  | Notes                                                                                     |
+| ------------------------------------------------------------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `NODE_ENV`                                                                      | `development`                            | `production` flips every rule above.                                                      |
+| `PORT`                                                                          | `3000`                                   |                                                                                           |
+| `DATABASE_URL`                                                                  | none, required                           | pg connection string; also read by `drizzle.config.ts`.                                   |
+| `PUBLIC_URL`                                                                    | `http://localhost:5173`                  | See above.                                                                                |
+| `CORS_ORIGINS`                                                                  | `http://localhost:5173`                  | Split on commas, trimmed.                                                                 |
+| `AUTH_SECRET`                                                                   | dev placeholder                          | 32+ chars. Rotating it signs everyone out.                                                |
+| `COOKIE_SECURE`                                                                 | `false`                                  | Must be `true` in production.                                                             |
+| `EMAIL_PROVIDER`                                                                | `smtp`                                   | `smtp` or `loops`; no fallback between them, see [email.md](email.md).                    |
+| `EMAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`                                          | `noreply@localhost`, `localhost`, `1025` | Mailpit locally.                                                                          |
+| `LOOPS_API_KEY`, `LOOPS_MAGIC_LINK_TEMPLATE_ID`, `LOOPS_INVITATION_TEMPLATE_ID` | unset                                    | Required together when `EMAIL_PROVIDER=loops`.                                            |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`                                    | dev placeholders                         | See [billing.md](billing.md).                                                             |
+| `STRIPE_PRICE_PRO_MONTHLY`                                                      | placeholder id                           | Not a secret; maps to `PLANS.PRO`.                                                        |
+| `SENTRY_DSN`                                                                    | unset                                    | GlitchTip project DSN; unset sends nothing. See [error-reporting.md](error-reporting.md). |
+| `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE`                                          | `NODE_ENV`, unset                        | Compose sets the release from `SOURCE_COMMIT`.                                            |
+| `LOG_LEVEL`                                                                     | `debug` locally, `info` in production    | pino level.                                                                               |
 
 ## Local overrides live in two `.env` files
 

@@ -23,7 +23,7 @@ It is deliberately separate from:
 | [background-jobs.md](background-jobs.md)                 | One pg-boss instance, why `createQueue` must precede `work`, and how to add a job                                                     |
 | [email.md](email.md)                                     | Which provider sends, chosen by `EMAIL_PROVIDER` alone, and how tests read mail back from Mailpit                                     |
 | [billing.md](billing.md)                                 | Plans as the single source of limits, `planGuard` before premium work, and how a Stripe price id becomes a plan on an organization    |
-| [error-reporting.md](error-reporting.md)                 | What reaches Discord, what only reaches the table, and why severity is a routing rule                                                 |
+| [error-reporting.md](error-reporting.md)                 | What reaches GlitchTip and alerts, how user, org, request and action ids are attached, and how the watchdog reports outages once      |
 
 ## Client
 

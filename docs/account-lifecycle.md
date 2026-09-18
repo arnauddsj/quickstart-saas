@@ -52,8 +52,8 @@ sees which organizations disappear with them.
 about a person, so nothing else is exported; when a project adds a table with personal
 data it adds a key here in the same change. The client turns the payload into a download.
 
-`error_log` rows may carry a `userId`; they are operational logs, kept 30 days and set to
-null on deletion, and are not part of the export on purpose.
+GlitchTip events carry only a user id, never an email; they are operational logs held by
+the tracker's retention, not personal data this app stores, and are not part of the export.
 
 ## What is not here
 

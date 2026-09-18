@@ -4,7 +4,7 @@ One pg-boss instance, started after migrations, with queues created before anyth
 works on them.
 
 Code: `server/src/jobs/boss.ts` (`boss`, `startBoss`, `stopBoss`, `bossStarted`),
-`jobs/errorLogCleanup.ts` (`registerErrorLogCleanup`, `ERROR_LOG_CLEANUP_QUEUE`),
+`jobs/heartbeat.ts` (`registerHeartbeat`, `HEARTBEAT_QUEUE`), `jobs/withReporting.ts`,
 `routes/health.ts`, `index.ts`.
 
 ## There is exactly one instance
@@ -30,11 +30,14 @@ Skipping the first call throws `Queue … does not exist` on the second, at boot
 1. Create `jobs/<name>.ts` exporting a `register<Name>(boss)` function that creates the
    queue, registers the worker and, if periodic, the cron schedule. Cron runs in UTC.
 2. Call it from `startBoss()`.
-3. Enqueue from anywhere with `boss.send(QUEUE, data)`; the handler receives an array of
+3. Wrap the handler in `withReporting(QUEUE, handler)` so a failure reaches GlitchTip as
+   `job.<queue>` before pg-boss retries it.
+4. Enqueue from anywhere with `boss.send(QUEUE, data)`; the handler receives an array of
    jobs in v12, so read `jobs[0].data` or loop.
 
-`errorLogCleanup.ts` is the worked example: one queue, one worker deleting `error_log`
-rows older than 30 days, one `0 4 * * *` schedule.
+`heartbeat.ts` is the worked example: one queue, one wrapped worker, one `*/5 * * * *`
+schedule. It exists so the watchdog can tell a stalled worker from an idle one; see
+[error-reporting.md](error-reporting.md#the-watchdog-reports-outages-once).
 
 ## Why pg-boss and not BullMQ
 

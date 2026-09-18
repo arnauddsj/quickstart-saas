@@ -4,7 +4,7 @@ Two schema files, one generated and one written by hand, and a migration loop th
 rehearsed locally before a deploy applies it.
 
 Code: `server/src/db/client.ts` (`db`, `pool`), `db/schema/auth.ts` (generated),
-`db/schema/app.ts` (`subscription`, `errorLog`, `PLAN_NAMES`, `ERROR_SEVERITIES`),
+`db/schema/app.ts` (`subscription`, `userConsent`, `PLAN_NAMES`),
 `db/schema/index.ts`, `db/migrate.ts` (`runMigrations`), `server/drizzle.config.ts`,
 `server/drizzle/*.sql`.
 

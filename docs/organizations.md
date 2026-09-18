@@ -62,7 +62,6 @@ address: another signed-in account opening the link gets "Invitation not found".
 
 ## Every org-scoped table carries `organizationId`
 
-`subscription` is unique per organization and cascades on delete; `error_log` carries a
-nullable `organizationId` with `set null`. A new feature table should follow the same
+`subscription` is unique per organization and cascades on delete. A new feature table should follow the same
 shape and be queried only from an `orgProcedure`, filtered by `ctx.organizationId`. That
 one convention is the entire tenancy boundary.

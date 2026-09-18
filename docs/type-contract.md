@@ -30,7 +30,7 @@ one type; the sixth was the one the deploy used.
 
 ## No `enum` crosses the boundary
 
-Both sides use `as const` tuples with a companion type (`PLAN_NAMES`, `ERROR_SEVERITIES`,
+Both sides use `as const` tuples with a companion type (`PLAN_NAMES`,
 `ORG_ADMIN_ROLES`). A TypeScript `enum` in a shared type surfaces as a nominal type the
 client cannot construct from a string, and zod's `z.enum` takes the tuple unchanged.
 
