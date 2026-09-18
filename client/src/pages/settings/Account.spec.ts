@@ -111,7 +111,10 @@ describe('Account page', () => {
 
     await button(wrapper, 'Send confirmation').trigger('click')
     await flushPromises()
-    expect(authClient.deleteUser).toHaveBeenCalledWith({ callbackURL: '/login?deleted=1' })
+    expect(authClient.deleteUser).toHaveBeenCalledWith({
+      callbackURL: '/login?deleted=1',
+      fetchOptions: { headers: { 'x-action-id': expect.any(String) } },
+    })
     expect(wrapper.text()).toContain('Check jane@test.io to confirm.')
     expect(button(wrapper, 'Delete my account').attributes('disabled')).toBeDefined()
   })

@@ -3,6 +3,7 @@ import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { errorMessage, trpc, useTRPCMutation, useTRPCQuery } from '@/services/server'
+import { runAction } from '@/lib/monitoring'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -22,7 +23,10 @@ const subscription = useTRPCQuery(
 )
 
 const checkout = useTRPCMutation<void, { url: string }>(
-  () => trpc.billing.createCheckout.mutate(),
+  () =>
+    runAction('billing.checkout', (actionId) =>
+      trpc.billing.createCheckout.mutate(undefined, { context: { actionId } }),
+    ),
   {
     onSuccess: ({ url }) => window.location.assign(url),
     onError: (e) => toast.error(errorMessage(e)),

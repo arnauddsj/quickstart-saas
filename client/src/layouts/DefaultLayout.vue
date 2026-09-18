@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 import {
+  Bug,
   Building2,
   CreditCard,
   Gauge,
@@ -13,6 +14,7 @@ import {
 } from '@lucide/vue'
 import { authClient } from '@/lib/auth'
 import { queryClient } from '@/services/server'
+import { setMonitoringUser } from '@/lib/monitoring'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import OrgSwitcher from '@/components/OrgSwitcher.vue'
@@ -34,9 +36,11 @@ const adminNav = [
   { to: { name: 'admin-users' }, label: 'Users', icon: Users },
   { to: { name: 'admin-organizations' }, label: 'Organizations', icon: Shield },
 ]
+const trackerUrl = import.meta.env.VITE_GLITCHTIP_URL
 
 async function signOut() {
   await authClient.signOut()
+  setMonitoringUser(null)
   queryClient.clear()
   await router.push({ name: 'login' })
 }
@@ -73,6 +77,16 @@ async function signOut() {
             <component :is="item.icon" class="size-4" />
             {{ item.label }}
           </RouterLink>
+          <a
+            v-if="trackerUrl"
+            :href="trackerUrl"
+            target="_blank"
+            rel="noopener"
+            class="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent"
+          >
+            <Bug class="size-4" />
+            Errors
+          </a>
         </nav>
       </template>
       <div class="mt-auto flex flex-col gap-2 pt-4">

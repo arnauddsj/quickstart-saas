@@ -3,6 +3,7 @@
 import { computed, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 import { authClient } from '@/lib/auth'
+import { actionHeaders, runAction } from '@/lib/monitoring'
 import { errorMessage, trpc, useTRPCQuery } from '@/services/server'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -90,7 +91,12 @@ const deletePending = ref(false)
 async function requestDeletion() {
   deleting.value = true
   try {
-    const { error } = await authClient.deleteUser({ callbackURL: '/login?deleted=1' })
+    const { error } = await runAction('account.delete', (actionId) =>
+      authClient.deleteUser({
+        callbackURL: '/login?deleted=1',
+        fetchOptions: { headers: actionHeaders(actionId) },
+      }),
+    )
     if (error) throw new Error(error.message ?? 'Could not start account deletion')
     deletePending.value = true
     deleteOpen.value = false

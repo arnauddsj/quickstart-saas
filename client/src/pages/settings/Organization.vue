@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { toast } from 'vue-sonner'
 import { authClient } from '@/lib/auth'
+import { actionHeaders, runAction } from '@/lib/monitoring'
 import { errorMessage, queryClient, trpc, useTRPCQuery } from '@/services/server'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -50,7 +51,13 @@ async function invite() {
   if (!email) return
   inviting.value = true
   try {
-    const { error } = await authClient.organization.inviteMember({ email, role: inviteRole.value })
+    const { error } = await runAction('organization.invite', (actionId) =>
+      authClient.organization.inviteMember({
+        email,
+        role: inviteRole.value,
+        fetchOptions: { headers: actionHeaders(actionId) },
+      }),
+    )
     if (error) throw new Error(error.message ?? 'Could not send invitation')
     inviteEmail.value = ''
     toast.success(`Invitation sent to ${email}`)

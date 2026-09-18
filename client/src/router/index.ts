@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteLocationNormalized } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { authClient } from '@/lib/auth'
+import { captureClientError, setMonitoringUser } from '@/lib/monitoring'
 // docs/auth.md
 
 const RELOAD_KEY = 'chunk-reload-at'
@@ -116,6 +117,7 @@ router.beforeEach(async (to) => {
     return false
   }
   if (!data) return { name: 'login', query: { redirect: to.fullPath } }
+  setMonitoringUser(data.user.id)
 
   const requiresAdmin = to.matched.some((r) => r.meta.requiresAdmin)
   if (requiresAdmin && data.user.role !== 'admin') return { name: 'dashboard' }
@@ -136,9 +138,9 @@ router.onError((error: unknown, to: RouteLocationNormalized) => {
     /failed to fetch dynamically imported module|importing a module script failed|error loading dynamically imported module/i.test(
       message,
     )
-  if (!isChunkError) return
+  if (!isChunkError) return captureClientError(error, 'router.navigation')
   const last = Number(sessionStorage.getItem(RELOAD_KEY) ?? 0)
-  if (Date.now() - last < 10_000) return
+  if (Date.now() - last < 10_000) return captureClientError(error, 'router.chunk_load')
   sessionStorage.setItem(RELOAD_KEY, String(Date.now()))
   window.location.assign(to.fullPath)
 })

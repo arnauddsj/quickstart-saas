@@ -1,16 +1,27 @@
 // docs/type-contract.md
-import { createTRPCClient, httpBatchLink, TRPCClientError } from '@trpc/client'
+import { createTRPCClient, httpBatchLink, httpLink, splitLink, TRPCClientError } from '@trpc/client'
 import type { TRPCClient } from '@trpc/client'
-import { QueryClient, useMutation, useQuery } from '@tanstack/vue-query'
+import { MutationCache, QueryCache, QueryClient, useMutation, useQuery } from '@tanstack/vue-query'
 import type { MutationOptions, QueryKey } from '@tanstack/vue-query'
 import type { MaybeRefOrGetter } from 'vue'
 import type { AppRouter } from 'server/router'
+import { actionHeaders, reportQueryFailure } from '@/lib/monitoring'
+
+const url = import.meta.env.VITE_API_ENDPOINT ?? '/trpc'
+const withCredentials: typeof fetch = (input, init) =>
+  fetch(input, { ...init, credentials: 'include' })
 
 export const trpc: TRPCClient<AppRouter> = createTRPCClient<AppRouter>({
   links: [
-    httpBatchLink({
-      url: import.meta.env.VITE_API_ENDPOINT ?? '/trpc',
-      fetch: (input, init) => fetch(input, { ...init, credentials: 'include' }),
+    splitLink({
+      condition: (op) => op.type === 'mutation',
+      true: httpLink({
+        url,
+        fetch: withCredentials,
+        headers: ({ op }) =>
+          typeof op.context.actionId === 'string' ? actionHeaders(op.context.actionId) : {},
+      }),
+      false: httpBatchLink({ url, fetch: withCredentials }),
     }),
   ],
 })
@@ -24,6 +35,8 @@ function isRateLimited(error: unknown): boolean {
 }
 
 export const queryClient = new QueryClient({
+  queryCache: new QueryCache({ onError: (error) => reportQueryFailure(error, 'query') }),
+  mutationCache: new MutationCache({ onError: (error) => reportQueryFailure(error, 'mutation') }),
   defaultOptions: {
     queries: {
       staleTime: 30_000,
