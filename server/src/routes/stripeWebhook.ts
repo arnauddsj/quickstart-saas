@@ -2,7 +2,7 @@
 import type { FastifyInstance } from 'fastify'
 import type Stripe from 'stripe'
 import { env } from '../config/env.js'
-import { reportError } from '../services/errorLog.js'
+import { reportError } from '../services/reportError.js'
 import { applyStripeSubscription, stripe } from '../services/stripe.js'
 
 export async function stripeWebhookRoutes(app: FastifyInstance) {
@@ -42,12 +42,13 @@ export async function stripeWebhookRoutes(app: FastifyInstance) {
           break
       }
     } catch (err) {
-      await reportError({
+      reportError({
         severity: 'ERROR',
         type: 'stripe.webhook',
-        message: `Failed to apply ${event.type}`,
+        message: 'Failed to apply Stripe event',
         error: err,
-        context: { eventId: event.id },
+        fingerprint: [event.type],
+        context: { eventId: event.id, eventType: event.type },
       })
       return reply.status(500).send({ received: false })
     }

@@ -2,7 +2,7 @@
 import { PgBoss } from 'pg-boss'
 import { env } from '../config/env.js'
 import { logger } from '../utils/logger.js'
-import { registerErrorLogCleanup } from './errorLogCleanup.js'
+import { registerHeartbeat } from './heartbeat.js'
 
 export const boss = new PgBoss({ connectionString: env.DATABASE_URL, schema: 'pgboss', max: 3 })
 
@@ -13,7 +13,7 @@ boss.on('error', (err: Error) => logger.error({ err }, 'pg-boss error'))
 
 export async function startBoss(): Promise<void> {
   await boss.start()
-  await registerErrorLogCleanup(boss)
+  await registerHeartbeat(boss)
   started = true
   logger.info('pg-boss started')
 }

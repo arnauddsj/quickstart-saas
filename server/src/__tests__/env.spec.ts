@@ -30,8 +30,8 @@ describe('parseEnv', () => {
   })
 
   it('treats empty strings as unset, which is what Compose passes for optional variables', () => {
-    const env = parseEnv({ ...base, DISCORD_WEBHOOK_URL: '', LOOPS_API_KEY: '', EMAIL_FROM: '' })
-    expect(env.DISCORD_WEBHOOK_URL).toBeUndefined()
+    const env = parseEnv({ ...base, SENTRY_DSN: '', LOOPS_API_KEY: '', EMAIL_FROM: '' })
+    expect(env.SENTRY_DSN).toBeUndefined()
     expect(env.LOOPS_API_KEY).toBeUndefined()
     expect(env.EMAIL_FROM).toBe('noreply@example.com')
   })

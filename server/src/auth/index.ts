@@ -8,8 +8,24 @@ import * as schema from '../db/schema/index.js'
 import { createEmailProvider } from '../email/index.js'
 import { cleanupBeforeUserDelete } from '../services/account.js'
 import { roleForNewUser } from '../services/admin.js'
+import { reportError } from '../services/reportError.js'
 
 export const emailProvider = createEmailProvider(env)
+
+async function sendEmail(kind: string, send: () => Promise<void>, userId?: string) {
+  try {
+    await send()
+  } catch (err) {
+    reportError({
+      severity: 'ERROR',
+      type: `email.${kind}`,
+      message: 'Email send failed',
+      error: err,
+      userId,
+    })
+    throw err
+  }
+}
 
 export const auth = betterAuth({
   baseURL: env.PUBLIC_URL,
@@ -27,20 +43,32 @@ export const auth = betterAuth({
   },
   emailVerification: {
     sendVerificationEmail: async ({ user, url }) => {
-      await emailProvider.sendEmailVerification({ to: user.email, url })
+      await sendEmail(
+        'verification',
+        () => emailProvider.sendEmailVerification({ to: user.email, url }),
+        user.id,
+      )
     },
   },
   user: {
     changeEmail: {
       enabled: true,
       sendChangeEmailConfirmation: async ({ user, newEmail, url }) => {
-        await emailProvider.sendEmailChange({ to: user.email, url, newEmail })
+        await sendEmail(
+          'email_change',
+          () => emailProvider.sendEmailChange({ to: user.email, url, newEmail }),
+          user.id,
+        )
       },
     },
     deleteUser: {
       enabled: true,
       sendDeleteAccountVerification: async ({ user, url }) => {
-        await emailProvider.sendAccountDeletion({ to: user.email, url })
+        await sendEmail(
+          'account_deletion',
+          () => emailProvider.sendAccountDeletion({ to: user.email, url }),
+          user.id,
+        )
       },
       beforeDelete: async (user) => {
         await cleanupBeforeUserDelete(user.id)
@@ -69,7 +97,7 @@ export const auth = betterAuth({
     magicLink({
       expiresIn: 15 * 60,
       sendMagicLink: async ({ email, url }) => {
-        await emailProvider.sendMagicLink({ to: email, url })
+        await sendEmail('magic_link', () => emailProvider.sendMagicLink({ to: email, url }))
       },
     }),
     admin({ defaultRole: 'member', adminRoles: ['admin'] }),
@@ -77,12 +105,17 @@ export const auth = betterAuth({
       allowUserToCreateOrganization: true,
       creatorRole: 'owner',
       sendInvitationEmail: async ({ email, id, organization: org, inviter }) => {
-        await emailProvider.sendInvitation({
-          to: email,
-          url: `${env.PUBLIC_URL}/accept-invitation/${id}`,
-          organizationName: org.name,
-          inviterEmail: inviter.user.email,
-        })
+        await sendEmail(
+          'invitation',
+          () =>
+            emailProvider.sendInvitation({
+              to: email,
+              url: `${env.PUBLIC_URL}/accept-invitation/${id}`,
+              organizationName: org.name,
+              inviterEmail: inviter.user.email,
+            }),
+          inviter.user.id,
+        )
       },
     }),
   ],

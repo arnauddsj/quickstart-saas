@@ -11,6 +11,7 @@ import {
   userConsent,
 } from '../db/schema/index.js'
 import { logger } from '../utils/logger.js'
+import { reportError } from './reportError.js'
 import { stripe } from './stripe.js'
 
 export async function organizationsOwnedSolelyBy(userId: string): Promise<string[]> {
@@ -40,7 +41,14 @@ export async function cleanupBeforeUserDelete(userId: string): Promise<void> {
       try {
         await stripe.subscriptions.cancel(sub.stripeSubscriptionId)
       } catch (err) {
-        logger.error({ err, organizationId }, 'stripe cancel failed during account deletion')
+        reportError({
+          severity: 'ERROR',
+          type: 'account.stripe_cancel',
+          message: 'Stripe cancel failed during account deletion',
+          error: err,
+          userId,
+          organizationId,
+        })
         throw err
       }
     }
@@ -48,10 +56,14 @@ export async function cleanupBeforeUserDelete(userId: string): Promise<void> {
       try {
         await stripe.customers.del(sub.stripeCustomerId)
       } catch (err) {
-        logger.warn(
-          { err, organizationId },
-          'stripe customer delete failed during account deletion',
-        )
+        reportError({
+          severity: 'WARNING',
+          type: 'account.stripe_customer_delete',
+          message: 'Stripe customer delete failed during account deletion',
+          error: err,
+          userId,
+          organizationId,
+        })
       }
     }
     await db.delete(organization).where(eq(organization.id, organizationId))

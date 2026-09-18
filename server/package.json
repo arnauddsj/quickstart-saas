@@ -9,10 +9,10 @@
     }
   },
   "scripts": {
-    "dev": "node --env-file-if-exists=.env --import tsx --watch src/index.ts",
+    "dev": "node --env-file-if-exists=.env --import tsx --import ./src/instrument.ts --watch src/index.ts",
     "build": "tsc -b tsconfig.build.json",
     "typecheck": "tsc -b tsconfig.build.json && tsc -p tsconfig.json",
-    "start": "node --env-file-if-exists=.env dist/index.js",
+    "start": "node --env-file-if-exists=.env --enable-source-maps --import ./dist/instrument.js dist/index.js",
     "test": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "db:generate": "drizzle-kit generate",

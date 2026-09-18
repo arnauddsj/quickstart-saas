@@ -44,7 +44,9 @@ const schema = z.object({
     .string()
     .default(devDefault('STRIPE_WEBHOOK_SECRET', 'whsec_placeholder')),
   STRIPE_PRICE_PRO_MONTHLY: z.string().default('price_pro_monthly_placeholder'),
-  DISCORD_WEBHOOK_URL: z.url().optional(),
+  SENTRY_DSN: z.url().optional(),
+  SENTRY_ENVIRONMENT: z.string().optional(),
+  SENTRY_RELEASE: z.string().optional(),
   TRUST_PROXY: z.string().default('loopback,uniquelocal'),
   LOG_LEVEL: z
     .enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent'])

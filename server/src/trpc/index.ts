@@ -1,4 +1,5 @@
 // docs/auth.md
+import * as Sentry from '@sentry/node'
 import { initTRPC, TRPCError } from '@trpc/server'
 import type { CreateFastifyContextOptions } from '@trpc/server/adapters/fastify'
 import { fromNodeHeaders } from 'better-auth/node'
@@ -11,6 +12,7 @@ import { member } from '../db/schema/index.js'
 
 export async function createContext({ req, res }: CreateFastifyContextOptions) {
   const result = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) })
+  if (result) Sentry.getIsolationScope().setUser({ id: result.user.id })
   return { req, res, user: result?.user ?? null, session: result?.session ?? null }
 }
 
@@ -60,6 +62,7 @@ export const orgProcedure = protectedProcedure.use(async ({ ctx, next }) => {
   })
   if (!membership)
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a member of this organization' })
+  Sentry.getIsolationScope().setTag('organization_id', organizationId)
   return next({ ctx: { ...ctx, organizationId, membership } })
 })
 

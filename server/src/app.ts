@@ -4,21 +4,39 @@ import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
 import rateLimit from '@fastify/rate-limit'
 import { fastifyTRPCPlugin, type FastifyTRPCPluginOptions } from '@trpc/server/adapters/fastify'
+import * as Sentry from '@sentry/node'
 import fastify from 'fastify'
+import { randomUUID } from 'node:crypto'
 import { registerAuthRoutes } from './auth/fastify.js'
 import { env } from './config/env.js'
 import { healthRoutes } from './routes/health.js'
 import { stripeWebhookRoutes } from './routes/stripeWebhook.js'
-import { reportError } from './services/errorLog.js'
+import { reportError } from './services/reportError.js'
 import { createContext } from './trpc/index.js'
 import { appRouter, type AppRouter } from './trpc/router/index.js'
 import { logger } from './utils/logger.js'
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+const headerId = (value: string | string[] | undefined) =>
+  typeof value === 'string' && UUID.test(value) ? value : undefined
 
 export async function buildApp() {
   const app = fastify({
     loggerInstance: logger,
     routerOptions: { maxParamLength: 5000 },
     trustProxy: true,
+    genReqId: (req) => headerId(req.headers['x-request-id']) ?? randomUUID(),
+  })
+
+  Sentry.setupFastifyErrorHandler(app)
+
+  app.addHook('onRequest', async (request, reply) => {
+    reply.header('x-request-id', request.id)
+    const scope = Sentry.getIsolationScope()
+    scope.setTag('request_id', request.id)
+    const actionId = headerId(request.headers['x-action-id'])
+    if (actionId) scope.setTag('action_id', actionId)
   })
 
   await app.register(helmet, { contentSecurityPolicy: false })
@@ -56,12 +74,13 @@ export async function buildApp() {
       createContext,
       onError({ error, path, ctx }) {
         if (error.code !== 'INTERNAL_SERVER_ERROR') return
-        void reportError({
+        reportError({
           severity: 'ERROR',
           type: `trpc.${path ?? 'unknown'}`,
           message: error.message,
           error: error.cause ?? error,
           userId: ctx?.user?.id ?? null,
+          organizationId: ctx?.session?.activeOrganizationId ?? null,
         })
       },
     } satisfies FastifyTRPCPluginOptions<AppRouter>['trpcOptions'],

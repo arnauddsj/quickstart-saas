@@ -15,6 +15,13 @@
       "when": 1789761363009,
       "tag": "0001_user-consent",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789767245865,
+      "tag": "0002_drop-error-log",
+      "breakpoints": true
     }
   ]
 }

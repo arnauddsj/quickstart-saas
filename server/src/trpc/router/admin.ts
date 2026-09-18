@@ -4,7 +4,7 @@ import { count, desc, eq, ilike, or } from 'drizzle-orm'
 import { z } from 'zod'
 import { auth } from '../../auth/index.js'
 import { db } from '../../db/client.js'
-import { errorLog, organization, session, user } from '../../db/schema/index.js'
+import { organization, session, user } from '../../db/schema/index.js'
 import { cleanupBeforeUserDelete } from '../../services/account.js'
 import { adminStats, recentSignups, userActivity, userOrganizations } from '../../services/admin.js'
 import { adminProcedure, router } from '../index.js'
@@ -156,17 +156,6 @@ export const adminRouter = router({
         .orderBy(desc(organization.createdAt))
         .limit(input.limit)
         .offset(input.offset)
-      return rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }))
-    }),
-
-  listErrors: adminProcedure
-    .input(z.object({ limit: z.number().int().min(1).max(200).default(50) }))
-    .query(async ({ input }) => {
-      const rows = await db
-        .select()
-        .from(errorLog)
-        .orderBy(desc(errorLog.createdAt))
-        .limit(input.limit)
       return rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }))
     }),
 })
