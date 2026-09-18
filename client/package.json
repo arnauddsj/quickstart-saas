@@ -15,6 +15,7 @@
   "dependencies": {
     "@hivehorizon/consent-kit": "github:HiveHorizon/consent-kit#v1.2.4",
     "@lucide/vue": "^1.47.0",
+    "@sentry/vue": "^10.75.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/vue-query": "^5.103.1",
     "@trpc/client": "^11.19.0",
@@ -32,6 +33,7 @@
     "vue-sonner": "^2.0.9"
   },
   "devDependencies": {
+    "@sentry/vite-plugin": "^5.4.0",
     "@trpc/server": "^11.19.0",
     "@types/node": "^24.13.5",
     "@vitejs/plugin-vue": "^6.0.9",

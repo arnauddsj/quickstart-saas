@@ -4,6 +4,7 @@ packages:
 
 # Native/postinstall builds pnpm may run. Anything not listed is skipped and warned about.
 allowBuilds:
+  '@sentry/cli': true
   esbuild: true
   simple-git-hooks: true
   vue-demi: true
