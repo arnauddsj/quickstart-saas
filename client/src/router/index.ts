@@ -1,90 +1,153 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useUserStore } from '../stores/userStore'
+import type { RouteLocationNormalized } from 'vue-router'
+import { toast } from 'vue-sonner'
+import { authClient } from '@/lib/auth'
+// docs/auth.md
 
-// Lazy-loaded route components
-const Dashboard = () => import('../views/Dashboard.vue')
-const Login = () => import('../views/Login.vue')
-const EmailVerification = () => import('../views/EmailVerification.vue')
-const Admin = () => import('../views/Admin.vue')
-const NotFound = () => import('../views/NotFound.vue')
+const RELOAD_KEY = 'chunk-reload-at'
 
-// Auth guard function
-async function requireAuth(to, from, next) {
-  // Skip auth check for non-protected routes
-  if (!to.meta.requiresAuth) {
-    return next()
-  }
-
-  // Get the user store
-  const userStore = useUserStore()
-  
-  // Check if the user is authenticated
-  const isAuthenticated = await userStore.checkAuth()
-  
-  if (!isAuthenticated && to.name !== 'login' && to.name !== 'auth') {
-    next({ name: 'login' })
-  } else {
-    next()
-  }
-}
-
-// Admin guard function
-async function requireAdmin(to, from, next) {
-  // Get the user store
-  const userStore = useUserStore()
-  
-  // Check if the user exists and has admin role
-  const isAuthenticated = await userStore.checkAuth()
-  
-  if (!isAuthenticated) {
-    // Not authenticated, redirect to login
-    next({ name: 'login' })
-  } else if (userStore.user?.role !== 'admin') {
-    // Authenticated but not admin, redirect to dashboard
-    next({ name: 'dashboard' })
-  } else {
-    // Is admin, proceed
-    next()
-  }
-}
-
-const router = createRouter({
+export const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
       path: '/',
-      name: 'dashboard',
-      component: Dashboard,
-      meta: { requiresAuth: true }
+      component: () => import('@/layouts/DefaultLayout.vue'),
+      meta: { requiresAuth: true, requiresOrg: true },
+      children: [
+        { path: '', name: 'dashboard', component: () => import('@/pages/Dashboard.vue') },
+        {
+          path: 'settings/organization',
+          name: 'settings-organization',
+          component: () => import('@/pages/settings/Organization.vue'),
+        },
+        {
+          path: 'settings/account',
+          name: 'settings-account',
+          component: () => import('@/pages/settings/Account.vue'),
+        },
+        {
+          path: 'settings/billing',
+          name: 'settings-billing',
+          component: () => import('@/pages/settings/Billing.vue'),
+        },
+        {
+          path: 'admin',
+          name: 'admin-dashboard',
+          component: () => import('@/pages/admin/Dashboard.vue'),
+          meta: { requiresAdmin: true },
+        },
+        {
+          path: 'admin/users',
+          name: 'admin-users',
+          component: () => import('@/pages/admin/Users.vue'),
+          meta: { requiresAdmin: true },
+        },
+        {
+          path: 'admin/organizations',
+          name: 'admin-organizations',
+          component: () => import('@/pages/admin/Organizations.vue'),
+          meta: { requiresAdmin: true },
+        },
+      ],
     },
     {
-      path: '/login',
-      name: 'login',
-      component: Login
+      path: '/',
+      component: () => import('@/layouts/AuthLayout.vue'),
+      children: [
+        { path: 'login', name: 'login', component: () => import('@/pages/Login.vue') },
+        {
+          path: 'privacy',
+          name: 'privacy',
+          component: () => import('@/pages/legal/Privacy.vue'),
+          meta: { wide: true },
+        },
+        {
+          path: 'legal',
+          name: 'legal',
+          component: () => import('@/pages/legal/LegalNotice.vue'),
+          meta: { wide: true },
+        },
+        {
+          path: 'terms',
+          name: 'terms',
+          component: () => import('@/pages/legal/Terms.vue'),
+          meta: { wide: true },
+        },
+        {
+          path: 'auth/callback',
+          name: 'auth-callback',
+          component: () => import('@/pages/AuthCallback.vue'),
+        },
+        {
+          path: 'onboarding',
+          name: 'onboarding',
+          component: () => import('@/pages/Onboarding.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'accept-invitation/:id',
+          name: 'accept-invitation',
+          component: () => import('@/pages/AcceptInvitation.vue'),
+          meta: { requiresAuth: true },
+        },
+      ],
     },
     {
-      path: '/auth',
-      name: 'auth',
-      component: EmailVerification
+      path: '/',
+      component: () => import('@/layouts/AuthLayout.vue'),
+      children: [
+        {
+          path: ':pathMatch(.*)*',
+          name: 'not-found',
+          component: () => import('@/pages/NotFound.vue'),
+        },
+      ],
     },
-    {
-      path: '/admin',
-      name: 'admin',
-      component: Admin,
-      meta: { requiresAuth: true, requiresAdmin: true },
-      beforeEnter: requireAdmin
-    },
-    {
-      path: '/:pathMatch(.*)*',
-      name: 'not-found',
-      component: NotFound
-    }
-  ]
+  ],
 })
 
-// Global navigation guard - need to convert to async/await format
-router.beforeEach(async (to, from, next) => {
-  await requireAuth(to, from, next)
+router.beforeEach(async (to) => {
+  const requiresAuth = to.matched.some((r) => r.meta.requiresAuth)
+  if (!requiresAuth) return true
+
+  const { data, error } = await authClient.getSession()
+  if (error) {
+    toast.error('Could not reach the server. Try again in a moment.')
+    return false
+  }
+  if (!data) return { name: 'login', query: { redirect: to.fullPath } }
+
+  const requiresAdmin = to.matched.some((r) => r.meta.requiresAdmin)
+  if (requiresAdmin && data.user.role !== 'admin') return { name: 'dashboard' }
+
+  const requiresOrg = to.matched.some((r) => r.meta.requiresOrg)
+  if (requiresOrg && !data.session.activeOrganizationId) {
+    const orgs = await authClient.organization.list()
+    const first = orgs.data?.[0]
+    if (!first) return { name: 'onboarding' }
+    await authClient.organization.setActive({ organizationId: first.id })
+  }
+  return true
 })
 
-export default router 
+router.onError((error: unknown, to: RouteLocationNormalized) => {
+  const message = error instanceof Error ? error.message : String(error)
+  const isChunkError =
+    /failed to fetch dynamically imported module|importing a module script failed|error loading dynamically imported module/i.test(
+      message,
+    )
+  if (!isChunkError) return
+  const last = Number(sessionStorage.getItem(RELOAD_KEY) ?? 0)
+  if (Date.now() - last < 10_000) return
+  sessionStorage.setItem(RELOAD_KEY, String(Date.now()))
+  window.location.assign(to.fullPath)
+})
+
+declare module 'vue-router' {
+  interface RouteMeta {
+    requiresAuth?: boolean
+    requiresAdmin?: boolean
+    requiresOrg?: boolean
+    wide?: boolean
+  }
+}

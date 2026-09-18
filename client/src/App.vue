@@ -1,13 +1,9 @@
 <script setup lang="ts">
-// The main app component simply contains the router view
+import { RouterView } from 'vue-router'
+import { Toaster } from '@/components/ui/sonner'
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <router-view />
-  </div>
+  <RouterView />
+  <Toaster position="top-right" />
 </template>
-
-<style scoped>
-
-</style>

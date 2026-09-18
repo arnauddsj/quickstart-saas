@@ -1,29 +1,14 @@
-import winston from 'winston'
-import { CONFIG } from '../config'
+import pino from 'pino'
+import { env, IS_PROD } from '../config/env.js'
 
-const format = CONFIG.IS_PRODUCTION
-  ? winston.format.json()
-  : winston.format.combine(
-      winston.format.colorize(),
-      winston.format.timestamp(),
-      winston.format.printf(
-        ({ timestamp, level, message, ...meta }) =>
-          `${timestamp} [${level}]: ${message} ${
-            Object.keys(meta).length ? JSON.stringify(meta, null, 2) : ''
-          }`
-      )
-    )
-
-export const logger = winston.createLogger({
-  level: CONFIG.IS_PRODUCTION ? 'info' : 'debug',
-  format,
-  transports: [
-    new winston.transports.Console(),
-    ...(CONFIG.IS_PRODUCTION
-      ? [
-          new winston.transports.File({ filename: 'error.log', level: 'error' }),
-          new winston.transports.File({ filename: 'combined.log' }),
-        ]
-      : []),
-  ],
+export const logger = pino({
+  level: env.LOG_LEVEL,
+  ...(IS_PROD || env.NODE_ENV === 'test'
+    ? {}
+    : {
+        transport: {
+          target: 'pino-pretty',
+          options: { colorize: true, translateTime: 'HH:MM:ss' },
+        },
+      }),
 })

@@ -1,77 +1,71 @@
+// docs/auth.md
 import { initTRPC, TRPCError } from '@trpc/server'
-import { CreateFastifyContextOptions } from "@trpc/server/adapters/fastify"
+import type { CreateFastifyContextOptions } from '@trpc/server/adapters/fastify'
+import { fromNodeHeaders } from 'better-auth/node'
+import { and, eq } from 'drizzle-orm'
 import { ZodError } from 'zod'
-import { verifyAndGetUser } from '../services/auth'
-import { CONFIG } from '../config'
-import { handleError } from '../utils/errorHandler'
+import { auth } from '../auth/index.js'
+import { IS_PROD } from '../config/env.js'
+import { db } from '../db/client.js'
+import { member } from '../db/schema/index.js'
 
-export const createContext = async (opts: CreateFastifyContextOptions) => {
-  const { req, res } = opts
-  const token = req.cookies[CONFIG.COOKIE_NAME]
-
-  if (!token) {
-    return { req, res, user: null }
-  }
-
-  try {
-    const user = await verifyAndGetUser(token)
-    return { req, res, user }
-  } catch (error) {
-    // Only log unexpected errors, not authentication-related ones
-    if (!(error instanceof TRPCError) || error.code !== 'UNAUTHORIZED') {
-      console.error('Error verifying token:', error)
-    }
-    res.clearCookie(CONFIG.COOKIE_NAME)
-    return { req, res, user: null }
-  }
+export async function createContext({ req, res }: CreateFastifyContextOptions) {
+  const result = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) })
+  return { req, res, user: result?.user ?? null, session: result?.session ?? null }
 }
 
-export const createTRPCContext = (opts: CreateFastifyContextOptions) => {
-  return createContext(opts)
-}
+export type Context = Awaited<ReturnType<typeof createContext>>
 
-export const t = initTRPC.context<typeof createTRPCContext>().create({
+const t = initTRPC.context<Context>().create({
   errorFormatter({ shape, error }) {
-    const sanitizedError = handleError(error)
-    
-    if (error.code === 'BAD_REQUEST' && error.cause instanceof ZodError) {
-      return {
-        ...shape,
-        message: 'Invalid input provided',
-        data: {
-          ...shape.data,
-          fieldErrors: CONFIG.IS_PRODUCTION 
-            ? 'Validation failed'
-            : error.cause.flatten().fieldErrors,
-        },
-      }
-    }
-
     return {
       ...shape,
-      message: sanitizedError.message,
+      message:
+        IS_PROD && error.code === 'INTERNAL_SERVER_ERROR' ? 'Internal server error' : shape.message,
+      data: {
+        ...shape.data,
+        zodError:
+          !IS_PROD && error.code === 'BAD_REQUEST' && error.cause instanceof ZodError
+            ? error.cause.flatten()
+            : null,
+      },
     }
-  }
+  },
 })
 
-export const publicProcedure = t.procedure
 export const router = t.router
+export const createCallerFactory = t.createCallerFactory
+export const publicProcedure = t.procedure
 
-export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
-  if (!ctx.user) {
+export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
+  if (!ctx.user || !ctx.session)
     throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' })
-  }
-  return next({ ctx: { ...ctx, user: ctx.user } })
+  if (ctx.user.banned) throw new TRPCError({ code: 'FORBIDDEN', message: 'Account suspended' })
+  return next({ ctx: { ...ctx, user: ctx.user, session: ctx.session } })
 })
 
-export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  if (ctx.user.role !== 'admin') {
-    throw new TRPCError({ 
-      code: 'FORBIDDEN', 
-      message: 'Access denied: Admin privileges required' 
-    })
-  }
-  return next({ ctx })
+export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.user.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN', message: 'Admin only' })
+  return next()
 })
 
-export { default as appRouter, AppRouter } from './router'
+export const ORG_ADMIN_ROLES = ['owner', 'admin'] as const
+
+export const orgProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  const organizationId = ctx.session.activeOrganizationId
+  if (!organizationId)
+    throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'No active organization' })
+  const membership = await db.query.member.findFirst({
+    where: and(eq(member.organizationId, organizationId), eq(member.userId, ctx.user.id)),
+  })
+  if (!membership)
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a member of this organization' })
+  return next({ ctx: { ...ctx, organizationId, membership } })
+})
+
+export const orgAdminProcedure = orgProcedure.use(({ ctx, next }) => {
+  if (!(ORG_ADMIN_ROLES as readonly string[]).includes(ctx.membership.role)) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Organization admin only' })
+  }
+  return next()
+})

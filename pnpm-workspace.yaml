@@ -1,0 +1,19 @@
+packages:
+  - client
+  - server
+
+# Native/postinstall builds pnpm may run. Anything not listed is skipped and warned about.
+allowBuilds:
+  esbuild: true
+  simple-git-hooks: true
+  vue-demi: true
+
+# pnpm 11 holds back packages published in the last 24h unless listed here.
+minimumReleaseAgeExclude:
+  - pg-boss@12.33.1
+  - prettier@3.9.8
+
+# Transitive advisories (pnpm audit): esbuild GHSA-67mh-4wv8-2f99, decode-uri-component GHSA-vcc3-ghjq-m6fr.
+overrides:
+  'esbuild@<0.25.0': '>=0.25.0'
+  'decode-uri-component@<0.5.0': '>=0.5.0'

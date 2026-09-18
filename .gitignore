@@ -1,26 +1,23 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
 node_modules
 dist
-dist-ssr
-*.local
+*.tsbuildinfo
+client/vite.config.d.ts
 
-# Editor directories and files
+# Secrets. server/.env.example is documentation; client/.env holds only public VITE_ vars.
+.env
+.env.*
+!.env.example
+!client/.env
+
+# Per-machine Claude Code permissions accrete one-off commands and can leak keys; never commit them.
+.claude/settings.local.json
+
+playwright-report
+test-results
+coverage
+logs
+*.log
+.DS_Store
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-server/pnpm-lock.yaml
-client/pnpm-lock.yaml
