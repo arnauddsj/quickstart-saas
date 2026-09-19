@@ -1,6 +1,8 @@
 <script setup lang="ts">
+// docs/organizations.md
 import { workspace } from '@/lib/brand'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { authClient } from '@/lib/auth'
 import { actionHeaders, runAction } from '@/lib/monitoring'
@@ -8,6 +10,14 @@ import { errorMessage, queryClient, trpc, useTRPCQuery } from '@/services/server
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -90,6 +100,119 @@ async function removeMember(memberId: string) {
   await queryClient.invalidateQueries({ queryKey: ['org', 'members'] })
 }
 
+const router = useRouter()
+const organizationId = computed(() => org.data.value?.id ?? '')
+const isOwner = computed(() => org.data.value?.myRole === 'owner')
+const ownerCount = computed(() => members.data.value?.filter((m) => m.role === 'owner').length ?? 0)
+const canLeave = computed(() => !isOwner.value || ownerCount.value > 1)
+
+const orgName = ref('')
+watch(
+  () => org.data.value?.name,
+  (current) => {
+    if (current && !orgName.value) orgName.value = current
+  },
+  { immediate: true },
+)
+const renaming = ref(false)
+async function rename() {
+  const name = orgName.value.trim()
+  if (!name) return
+  renaming.value = true
+  try {
+    const { error } = await authClient.organization.update({
+      organizationId: organizationId.value,
+      data: { name },
+    })
+    if (error) throw new Error(error.message ?? `Could not rename the ${workspace.one}`)
+    toast.success(`${workspace.One} renamed`)
+    await queryClient.invalidateQueries({ queryKey: ['org'] })
+  } catch (e) {
+    toast.error(errorMessage(e))
+  } finally {
+    renaming.value = false
+  }
+}
+
+const transferTo = ref<{ id: string; label: string } | null>(null)
+const transferring = ref(false)
+async function transferOwnership() {
+  const target = transferTo.value
+  const me = members.data.value?.find((m) => m.userId === myUserId.value)
+  if (!target || !me) return
+  transferring.value = true
+  try {
+    const promoted = await authClient.organization.updateMemberRole({
+      organizationId: organizationId.value,
+      memberId: target.id,
+      role: 'owner',
+    })
+    if (promoted.error) throw new Error(promoted.error.message ?? 'Could not transfer ownership')
+    const stepped = await authClient.organization.updateMemberRole({
+      organizationId: organizationId.value,
+      memberId: me.id,
+      role: 'admin',
+    })
+    if (stepped.error) {
+      throw new Error(
+        `${target.label} is now an owner, but you are still one: ${stepped.error.message}`,
+      )
+    }
+    toast.success(`${target.label} now owns this ${workspace.one}`)
+    transferTo.value = null
+    await queryClient.invalidateQueries({ queryKey: ['org'] })
+  } catch (e) {
+    toast.error(errorMessage(e))
+  } finally {
+    transferring.value = false
+  }
+}
+
+async function exitWorkspace(message: string) {
+  await authClient.organization.setActive({ organizationId: null })
+  await queryClient.invalidateQueries()
+  toast.success(message)
+  await router.push({ name: 'dashboard' })
+}
+
+const leaveOpen = ref(false)
+const leaving = ref(false)
+async function leave() {
+  leaving.value = true
+  try {
+    const { error } = await authClient.organization.leave({ organizationId: organizationId.value })
+    if (error) throw new Error(error.message ?? `Could not leave the ${workspace.one}`)
+    leaveOpen.value = false
+    await exitWorkspace(`You left ${org.data.value?.name ?? `the ${workspace.one}`}`)
+  } catch (e) {
+    toast.error(errorMessage(e))
+  } finally {
+    leaving.value = false
+  }
+}
+
+const deleteOpen = ref(false)
+const deleteConfirmation = ref('')
+const deleting = ref(false)
+async function deleteWorkspace() {
+  deleting.value = true
+  try {
+    const { error } = await runAction('organization.delete', (actionId) =>
+      authClient.organization.delete({
+        organizationId: organizationId.value,
+        fetchOptions: { headers: actionHeaders(actionId) },
+      }),
+    )
+    if (error) throw new Error(error.message ?? `Could not delete the ${workspace.one}`)
+    deleteOpen.value = false
+    await exitWorkspace(`${workspace.One} deleted`)
+  } catch (e) {
+    toast.error(errorMessage(e))
+  } finally {
+    deleting.value = false
+  }
+}
+
 async function cancelInvitation(invitationId: string) {
   const { error } = await authClient.organization.cancelInvitation({ invitationId })
   if (error) {
@@ -108,6 +231,23 @@ async function cancelInvitation(invitationId: string) {
         {{ org.data.value.slug }} · your role: {{ org.data.value.myRole }}
       </p>
     </div>
+
+    <Card v-if="canManage">
+      <CardHeader>
+        <CardTitle>{{ workspace.One }} name</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form class="flex items-end gap-2" @submit.prevent="rename">
+          <div class="flex flex-1 flex-col gap-2">
+            <Label for="org-name">Name</Label>
+            <Input id="org-name" v-model="orgName" maxlength="100" required />
+          </div>
+          <Button type="submit" :disabled="renaming || orgName.trim() === org.data.value?.name"
+            >Save</Button
+          >
+        </form>
+      </CardContent>
+    </Card>
 
     <Card>
       <CardHeader>
@@ -142,6 +282,14 @@ async function cancelInvitation(invitationId: string) {
                 <Badge v-else variant="outline">{{ m.role }}</Badge>
               </TableCell>
               <TableCell v-if="canManage" class="text-right">
+                <Button
+                  v-if="isOwner && m.role !== 'owner' && m.userId !== myUserId"
+                  variant="ghost"
+                  size="sm"
+                  @click="transferTo = { id: m.id, label: m.name || m.email }"
+                >
+                  Make owner
+                </Button>
                 <Button
                   v-if="m.role !== 'owner' && m.userId !== myUserId"
                   variant="ghost"
@@ -209,5 +357,84 @@ async function cancelInvitation(invitationId: string) {
         </div>
       </CardContent>
     </Card>
+    <Card class="border-destructive/40">
+      <CardHeader>
+        <CardTitle>Leave or delete</CardTitle>
+      </CardHeader>
+      <CardContent class="flex flex-col gap-3 text-sm">
+        <p v-if="!canLeave" class="text-muted-foreground">
+          You are the only owner. Make someone else owner before leaving.
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <Button variant="outline" :disabled="!canLeave" @click="leaveOpen = true">
+            Leave {{ workspace.one }}
+          </Button>
+          <Button
+            v-if="isOwner"
+            variant="destructive"
+            @click="((deleteConfirmation = ''), (deleteOpen = true))"
+          >
+            Delete {{ workspace.one }}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+
+    <Dialog :open="transferTo !== null" @update:open="(open) => !open && (transferTo = null)">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Make {{ transferTo?.label }} the owner?</DialogTitle>
+          <DialogDescription>
+            They get full control, including billing and deletion. You stay as an admin.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" @click="transferTo = null">Cancel</Button>
+          <Button :disabled="transferring" @click="transferOwnership">Transfer ownership</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog v-model:open="leaveOpen">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Leave {{ org.data.value?.name }}?</DialogTitle>
+          <DialogDescription>
+            You lose access to its data until someone invites you again.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" @click="leaveOpen = false">Cancel</Button>
+          <Button variant="destructive" :disabled="leaving" @click="leave">Leave</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog v-model:open="deleteOpen">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete {{ org.data.value?.name }}?</DialogTitle>
+          <DialogDescription>
+            Every member loses access, all its data is deleted and its subscription is cancelled.
+            This cannot be undone. Type the {{ workspace.one }} name to confirm.
+          </DialogDescription>
+        </DialogHeader>
+        <Input
+          v-model="deleteConfirmation"
+          aria-label="Confirmation"
+          :placeholder="org.data.value?.name"
+        />
+        <DialogFooter>
+          <Button variant="outline" @click="deleteOpen = false">Cancel</Button>
+          <Button
+            variant="destructive"
+            :disabled="deleting || deleteConfirmation.trim() !== org.data.value?.name"
+            @click="deleteWorkspace"
+          >
+            Delete forever
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

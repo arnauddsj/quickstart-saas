@@ -53,6 +53,15 @@ path must call it as well.
 The Account page calls `user.deletionPreview` before asking for confirmation so the person
 sees which organizations disappear with them.
 
+## Sessions are listed and revoked by better-auth
+
+The Account page lists `authClient.listSessions()`, newest activity first, labels each
+with `describeUserAgent` (`client/src/lib/userAgent.ts`, browser and system, never the raw
+string) and marks the current one by `session.id`. "Sign out" on a row calls
+`revokeSession({ token })`; "Sign out other sessions" calls `revokeOtherSessions()`, which
+keeps only the current one. A revoked device's next `get-session` answers `null`, so its
+router guard signs it out on the next navigation.
+
 ## The export is the GDPR "right of access", and it is one query
 
 `user.exportData` returns JSON with `user`, `sessions`, `memberships`, `invitations`,

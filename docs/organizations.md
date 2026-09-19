@@ -11,8 +11,10 @@ Code: `server/src/auth/index.ts` (the `organization` plugin), `trpc/index.ts`
 (`orgProcedure`, `orgAdminProcedure`, `ORG_ADMIN_ROLES`), `trpc/router/org.ts`,
 `db/schema/auth.ts` (`organization`, `member`, `invitation`), `db/schema/app.ts`
 (`subscription.organizationId`), `client/src/pages/Onboarding.vue`,
-`client/src/components/OrgSwitcher.vue`, `client/src/router/index.ts`. Spec:
-`server/src/__tests__/procedures.spec.ts`.
+`client/src/components/OrgSwitcher.vue`, `client/src/pages/settings/Organization.vue`,
+`client/src/router/index.ts`. Specs: `server/src/__tests__/procedures.spec.ts`,
+`server/src/__tests__/integration/workspaceControls.int.spec.ts`,
+`client/src/pages/settings/Organization.spec.ts`, `e2e/workspace-settings.spec.ts`.
 
 ## The active organization lives on the session
 
@@ -47,6 +49,29 @@ this happens is the one place to change it.
 | `admin`, `member`          | `user.role`   | the `/admin/*` pages and `adminProcedure`                                               |
 
 Nothing links them. See [auth.md](auth.md#what-each-procedure-tier-guarantees).
+
+## The settings page calls better-auth, which enforces the roles
+
+`settings/Organization.vue` renames, transfers, leaves and deletes through the organization
+plugin's endpoints; there is no tRPC mutation for any of them. The integration spec pins
+the rules the page relies on, so a better-auth upgrade that loosens one fails there:
+
+| Action             | Endpoint                                 | Who                                                                                 |
+| ------------------ | ---------------------------------------- | ----------------------------------------------------------------------------------- |
+| Rename             | `organization/update`                    | owners and admins; members get 403                                                  |
+| Transfer ownership | `organization/update-member-role`, twice | owners only: promote the member to `owner`, then step down to `admin`               |
+| Leave              | `organization/leave`                     | anyone but the only owner (`…AS_THE_ONLY_OWNER`)                                    |
+| Delete             | `organization/delete`                    | owners only; cancels Stripe first, see [account-lifecycle.md](account-lifecycle.md) |
+
+**Transfer is two calls and fails safe.** If the second call fails the workspace has two
+owners and the page says so; it is never left without one, because better-auth refuses to
+demote or remove the last owner. An admin cannot promote anyone, themselves included, to
+`owner`.
+
+**After leaving or deleting, the page clears the active workspace** with
+`setActive({ organizationId: null })` and goes to the dashboard. The router guard then
+activates the user's next workspace or sends them to onboarding, the same path a new
+account takes. Deletion asks for the workspace name to be typed first.
 
 ## Invitations are sent by the plugin and accepted by URL
 

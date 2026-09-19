@@ -10,6 +10,9 @@ const authClient = vi.hoisted(() => ({
   updateUser: vi.fn(),
   changeEmail: vi.fn(),
   deleteUser: vi.fn(),
+  listSessions: vi.fn(),
+  revokeOtherSessions: vi.fn(),
+  revokeSession: vi.fn(),
 }))
 vi.mock('@/lib/auth', () => ({ authClient }))
 
@@ -43,8 +46,31 @@ const button = (wrapper: ReturnType<typeof render>, text: string) => {
 beforeEach(() => {
   vi.clearAllMocks()
   authClient.useSession.mockReturnValue(
-    ref({ data: { user: { id: 'u1', name: 'Jane', email: 'jane@test.io' } } }),
+    ref({
+      data: { user: { id: 'u1', name: 'Jane', email: 'jane@test.io' }, session: { id: 's1' } },
+    }),
   )
+  authClient.listSessions.mockResolvedValue({
+    data: [
+      {
+        id: 's1',
+        token: 't1',
+        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/140.0 Safari/537.36',
+        ipAddress: '203.0.113.5',
+        updatedAt: '2026-09-19T09:00:00Z',
+      },
+      {
+        id: 's2',
+        token: 't2',
+        userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Safari/604.1',
+        ipAddress: '198.51.100.9',
+        updatedAt: '2026-09-18T09:00:00Z',
+      },
+    ],
+    error: null,
+  })
+  authClient.revokeOtherSessions.mockResolvedValue({ data: {}, error: null })
+  authClient.revokeSession.mockResolvedValue({ data: {}, error: null })
   authClient.updateUser.mockResolvedValue({ data: {}, error: null })
   authClient.changeEmail.mockResolvedValue({ data: {}, error: null })
   authClient.deleteUser.mockResolvedValue({ data: {}, error: null })
@@ -117,5 +143,20 @@ describe('Account page', () => {
     })
     expect(wrapper.text()).toContain('Check jane@test.io to confirm.')
     expect(button(wrapper, 'Delete my account').attributes('disabled')).toBeDefined()
+  })
+
+  it('lists sessions, marks this device, and signs the others out', async () => {
+    const wrapper = render()
+    await flushPromises()
+    const text = wrapper.text()
+    expect(text).toContain('Chrome on macOS')
+    expect(text).toContain('This device')
+    expect(text).toContain('Safari on iOS')
+
+    await button(wrapper, 'Sign out').trigger('click')
+    expect(authClient.revokeSession).toHaveBeenCalledWith({ token: 't2' })
+    await button(wrapper, 'Sign out other sessions').trigger('click')
+    await flushPromises()
+    expect(authClient.revokeOtherSessions).toHaveBeenCalled()
   })
 })

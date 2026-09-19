@@ -5,7 +5,9 @@ import { toast } from 'vue-sonner'
 import { authClient } from '@/lib/auth'
 import { actionHeaders, runAction } from '@/lib/monitoring'
 import { brand, workspace } from '@/lib/brand'
-import { errorMessage, trpc, useTRPCQuery } from '@/services/server'
+import { describeUserAgent } from '@/lib/userAgent'
+import { errorMessage, queryClient, trpc, useTRPCQuery } from '@/services/server'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -83,6 +85,38 @@ async function downloadData() {
   }
 }
 
+const sessions = useTRPCQuery(async () => {
+  const { data, error } = await authClient.listSessions()
+  if (error) throw new Error(error.message ?? 'Could not list your sessions')
+  return [...data].sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt))
+}, ['auth', 'sessions'])
+const currentSessionId = computed(() => session.value.data?.session.id ?? null)
+const otherSessions = computed(
+  () => sessions.data.value?.filter((s) => s.id !== currentSessionId.value).length ?? 0,
+)
+const signingOut = ref(false)
+async function signOutOthers() {
+  signingOut.value = true
+  try {
+    const { error } = await authClient.revokeOtherSessions()
+    if (error) throw new Error(error.message ?? 'Could not sign out the other sessions')
+    toast.success('Signed out everywhere else')
+    await queryClient.invalidateQueries({ queryKey: ['auth', 'sessions'] })
+  } catch (e) {
+    toast.error(errorMessage(e))
+  } finally {
+    signingOut.value = false
+  }
+}
+async function signOutSession(token: string) {
+  const { error } = await authClient.revokeSession({ token })
+  if (error) {
+    toast.error(error.message ?? 'Could not sign that session out')
+    return
+  }
+  await queryClient.invalidateQueries({ queryKey: ['auth', 'sessions'] })
+}
+
 const deleteOpen = ref(false)
 const preview = useTRPCQuery(() => trpc.user.deletionPreview.query(), ['user', 'deletionPreview'], {
   enabled: deleteOpen,
@@ -143,6 +177,46 @@ async function requestDeletion() {
           </div>
           <Button type="submit" variant="outline" :disabled="changingEmail">Change</Button>
         </form>
+      </CardContent>
+    </Card>
+
+    <Card>
+      <CardHeader><CardTitle>Sessions</CardTitle></CardHeader>
+      <CardContent class="space-y-3">
+        <ul class="divide-y text-sm">
+          <li
+            v-for="s in sessions.data.value ?? []"
+            :key="s.id"
+            class="flex items-center justify-between gap-3 py-2"
+          >
+            <div>
+              <p class="font-medium">
+                {{ describeUserAgent(s.userAgent) }}
+                <Badge v-if="s.id === currentSessionId" variant="secondary" class="ml-1"
+                  >This device</Badge
+                >
+              </p>
+              <p class="text-muted-foreground">
+                {{ s.ipAddress ?? 'unknown address' }} · last active
+                {{ new Date(s.updatedAt).toLocaleString() }}
+              </p>
+            </div>
+            <Button
+              v-if="s.id !== currentSessionId"
+              variant="ghost"
+              size="sm"
+              @click="signOutSession(s.token)"
+              >Sign out</Button
+            >
+          </li>
+        </ul>
+        <Button
+          variant="outline"
+          :disabled="signingOut || otherSessions === 0"
+          @click="signOutOthers"
+        >
+          Sign out other sessions
+        </Button>
       </CardContent>
     </Card>
 
