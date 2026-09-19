@@ -38,12 +38,13 @@ It is deliberately separate from:
 
 ## Operational
 
-| Doc                              | What it answers                                                                                                         |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| [development.md](development.md) | Running it locally, what `docker compose up` does and does not start, and the port-collision trap                       |
-| [backups.md](backups.md)         | Taking a consistent dump with row counts, restoring it, and the drill that proves a dump restores                       |
-| [deployment.md](deployment.md)   | What happens on container start, the shutdown budget, health tiers, and the Coolify settings that live outside the repo |
-| [testing.md](testing.md)         | What each test layer proves, how the integration database is created and reset, and which kind of spec a change needs   |
+| Doc                                      | What it answers                                                                                                         |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| [development.md](development.md)         | Running it locally, what `docker compose up` does and does not start, and the port-collision trap                       |
+| [starter-updates.md](starter-updates.md) | How starter releases are recorded, and how a product finds and applies the fixes made after it was cloned               |
+| [backups.md](backups.md)                 | Taking a consistent dump with row counts, restoring it, and the drill that proves a dump restores                       |
+| [deployment.md](deployment.md)           | What happens on container start, the shutdown budget, health tiers, and the Coolify settings that live outside the repo |
+| [testing.md](testing.md)                 | What each test layer proves, how the integration database is created and reset, and which kind of spec a change needs   |
 
 ## Adding a doc
 

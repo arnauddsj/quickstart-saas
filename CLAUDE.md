@@ -157,6 +157,10 @@ Conventional Commits, imperative mood, one logical change per commit:
 attribution lines. A sibling project's log reads `up`, `u`, `fix`; that is what this
 rule prevents.
 
+In the starter itself, a change products should take also gets a `CHANGELOG.md` entry
+under `[Unreleased]`, so cloned products can find and apply it →
+[`docs/starter-updates.md`](docs/starter-updates.md).
+
 ## Multi-step work
 
 For anything beyond a small change, write `GATES.md` at the repo root first: one checkbox

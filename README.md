@@ -40,3 +40,4 @@ refuses to start without them. Only the client port is published; see
   agents alike.
 - [`docs/`](docs/README.md): how each part works and why it is shaped that way.
 - [`.claude/TODO.md`](.claude/TODO.md): what is not done yet.
+- [`CHANGELOG.md`](CHANGELOG.md): starter releases, and what cloned products should apply.
