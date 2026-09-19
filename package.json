@@ -22,6 +22,9 @@
     "db:studio": "pnpm --filter server db:studio",
     "auth:schema": "pnpm --filter server auth:schema",
     "make-admin": "pnpm --filter server make-admin",
+    "db:backup": "pnpm --filter server db:backup",
+    "db:restore": "pnpm --filter server db:restore",
+    "db:restore-check": "pnpm --filter server db:restore-check",
     "prepare": "simple-git-hooks"
   },
   "simple-git-hooks": {

@@ -12,6 +12,7 @@ client/vite.config.d.ts
 # Per-machine Claude Code permissions accrete one-off commands and can leak keys; never commit them.
 .claude/settings.local.json
 
+backups
 playwright-report
 test-results
 coverage

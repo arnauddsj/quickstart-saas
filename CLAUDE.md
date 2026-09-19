@@ -38,6 +38,7 @@ pnpm db:generate              # after editing server/src/db/schema/app.ts
 pnpm db:migrate               # same code that runs at boot
 pnpm auth:schema              # regenerate server/src/db/schema/auth.ts
 pnpm make-admin you@example.com   # fallback only: the first sign-up is the admin
+pnpm db:backup                # dump + row counts; db:restore-check drills it → docs/backups.md
 ```
 
 ## Architecture
