@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { workspace } from '@/lib/brand'
 import { legal } from '@/data/legal'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 </script>
@@ -16,15 +17,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
       <CardHeader><CardTitle>What we store to run your account</CardTitle></CardHeader>
       <CardContent class="space-y-2 text-sm">
         <p>
-          Your email address, your name, the organizations you belong to and your role in them, your
-          sessions (creation date, expiry, IP address, browser), your billing status per
-          organization, and the analytics choice you make on this page. This is what the service
-          needs to sign you in and bill the organization; it is kept while the account exists.
+          Your email address, your name, the {{ workspace.many }} you belong to and your role in
+          them, your sessions (creation date, expiry, IP address, browser), your billing status per
+          {{ workspace.one }}, and the analytics choice you make on this page. This is what the
+          service needs to sign you in and bill the {{ workspace.one }}; it is kept while the
+          account exists.
         </p>
         <p>
           You can download all of it as JSON, change your email, or delete your account from
-          <strong>Settings → Account</strong>. Deleting your account removes every organization you
-          are the only owner of, cancels its subscription, and erases the rows above.
+          <strong>Settings → Account</strong>. Deleting your account removes every
+          {{ workspace.one }} you are the only owner of, cancels its subscription, and erases the
+          rows above.
         </p>
       </CardContent>
     </Card>
@@ -57,7 +60,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
         </p>
         <p>
           Session replay films the page, so the whole application area is masked before anything is
-          sent: text you type, names, emails and organization data are never transmitted.
+          sent: text you type, names, emails and {{ workspace.one }} data are never transmitted.
         </p>
       </CardContent>
     </Card>

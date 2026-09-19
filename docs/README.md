@@ -19,6 +19,8 @@ It is deliberately separate from:
 | [auth.md](auth.md)                                       | How a magic link becomes a session cookie, why the proxy must not rewrite `Host`, and what each tRPC procedure tier guarantees        |
 | [admin.md](admin.md)                                     | Why the first account is the admin, how activity is derived from sessions, and what each admin lever does                             |
 | [organizations.md](organizations.md)                     | Where the active organization lives, how the first one is created, and why every org-scoped query goes through `orgProcedure`         |
+| [branding.md](branding.md)                               | Where the product is named, what users call a workspace, and how `teams: false` hides workspaces without removing them                |
+| [reference-feature.md](reference-feature.md)             | The Projects placeholder: the workspace-scoped, plan-limited pattern it demonstrates and how to rename it on day one                  |
 | [database-and-migrations.md](database-and-migrations.md) | Which schema file is generated and which is hand-written, and the generate → review → commit → boot-applies loop                      |
 | [background-jobs.md](background-jobs.md)                 | One pg-boss instance, why `createQueue` must precede `work`, and how to add a job                                                     |
 | [email.md](email.md)                                     | Which provider sends, chosen by `EMAIL_PROVIDER` alone, and how tests read mail back from Mailpit                                     |

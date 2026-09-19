@@ -1,6 +1,7 @@
 // docs/organizations.md
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
+import { brand, completeOnboarding } from './onboarding'
 
 const MAILPIT_URL = process.env.MAILPIT_URL ?? 'http://localhost:8025'
 
@@ -31,6 +32,7 @@ async function requestLink(page: Page, email: string) {
 test('an invited person signs in from the invitation and lands in the organization as a member', async ({
   browser,
 }) => {
+  test.skip(!brand.teams, 'invitations exist only when brand.teams is on')
   const run = Date.now().toString(36)
   const owner = `owner-${run}@example.com`
   const invitee = `invitee-${run}@example.com`
@@ -40,9 +42,7 @@ test('an invited person signs in from the invitation and lands in the organizati
   await ownerPage.goto('/login')
   await requestLink(ownerPage, owner)
   await ownerPage.goto(await link(owner, /https?:\/\/\S+magic-link\/verify\S+/))
-  await ownerPage.getByLabel(/organization name/i).fill(orgName)
-  await ownerPage.getByRole('button', { name: /create/i }).click()
-  await ownerPage.waitForURL(/\/$/)
+  await completeOnboarding(ownerPage, orgName)
   await ownerPage.goto('/settings/organization')
   await ownerPage.getByPlaceholder('colleague@example.com').fill(invitee)
   await ownerPage.getByRole('button', { name: 'Invite', exact: true }).click()
@@ -58,7 +58,7 @@ test('an invited person signs in from the invitation and lands in the organizati
   await expect(page.getByRole('button', { name: orgName })).toBeVisible()
   await page.goto('/settings/billing')
   await expect(
-    page.getByText('Only owners and admins of this organization can change its plan.'),
+    page.getByText(`Only owners and admins of this ${brand.workspace.one} can change its plan.`),
   ).toBeVisible()
   await expect(page.getByRole('button', { name: /upgrade/i })).toHaveCount(0)
 })

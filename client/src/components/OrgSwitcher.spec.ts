@@ -1,3 +1,4 @@
+import { workspace } from '@/lib/brand'
 import { flushPromises, mount } from '@vue/test-utils'
 import { ref } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -57,7 +58,7 @@ describe('OrgSwitcher', () => {
     expect(wrapper.findAll('[data-menu-item]').map((b) => b.text().trim())).toEqual([
       'Acme',
       'Globex',
-      'Create organization',
+      `Create ${workspace.one}`,
     ])
   })
 
@@ -79,7 +80,7 @@ describe('OrgSwitcher', () => {
 
   it('creates an organization with a unique slug and makes it active', async () => {
     const wrapper = render()
-    await menuItem(wrapper, 'Create organization').trigger('click')
+    await menuItem(wrapper, `Create ${workspace.one}`).trigger('click')
     await wrapper.find('#org-name').setValue('  New Team!  ')
     await wrapper.find('form').trigger('submit')
     await flushPromises()
@@ -102,7 +103,7 @@ describe('OrgSwitcher', () => {
       error: { message: 'Slug taken' },
     })
     const wrapper = render()
-    await menuItem(wrapper, 'Create organization').trigger('click')
+    await menuItem(wrapper, `Create ${workspace.one}`).trigger('click')
     await wrapper.find('#org-name').setValue('Dup')
     await wrapper.find('form').trigger('submit')
     await flushPromises()

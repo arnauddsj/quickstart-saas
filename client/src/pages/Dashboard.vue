@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { workspace } from '@/lib/brand'
 import { trpc, useTRPCQuery } from '@/services/server'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,9 +9,9 @@ const me = useTRPCQuery(() => trpc.user.me.query(), ['user', 'me'])
 const org = useTRPCQuery(() => trpc.org.current.query(), ['org', 'current'])
 
 const placeholders = [
-  { title: 'Activity', description: 'Recent events in your organization.' },
+  { title: 'Activity', description: `Recent events in your ${workspace.one}.` },
   { title: 'Usage', description: 'How much of your plan you have used.' },
-  { title: 'Team', description: 'Who has access to this workspace.' },
+  { title: 'Team', description: `Who has access to this ${workspace.one}.` },
 ]
 </script>
 

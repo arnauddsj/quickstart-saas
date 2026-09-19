@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { workspace } from '@/lib/brand'
 import { computed, ref } from 'vue'
 import { toast } from 'vue-sonner'
 import { authClient } from '@/lib/auth'
@@ -102,7 +103,7 @@ async function cancelInvitation(invitationId: string) {
 <template>
   <div class="flex max-w-4xl flex-col gap-6">
     <div>
-      <h1 class="text-2xl font-semibold">{{ org.data.value?.name ?? 'Organization' }}</h1>
+      <h1 class="text-2xl font-semibold">{{ org.data.value?.name ?? workspace.One }}</h1>
       <p v-if="org.data.value" class="text-sm text-muted-foreground">
         {{ org.data.value.slug }} · your role: {{ org.data.value.myRole }}
       </p>

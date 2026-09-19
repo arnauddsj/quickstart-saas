@@ -5,6 +5,7 @@ import {
   Bug,
   Building2,
   CreditCard,
+  FolderKanban,
   Gauge,
   LayoutDashboard,
   LogOut,
@@ -15,6 +16,7 @@ import {
 import { authClient } from '@/lib/auth'
 import { queryClient } from '@/services/server'
 import { setMonitoringUser } from '@/lib/monitoring'
+import { brand, workspace } from '@/lib/brand'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import OrgSwitcher from '@/components/OrgSwitcher.vue'
@@ -27,14 +29,17 @@ const isAdmin = computed(() => user.value?.role === 'admin')
 
 const nav = [
   { to: { name: 'dashboard' }, label: 'Dashboard', icon: LayoutDashboard },
-  { to: { name: 'settings-organization' }, label: 'Organization', icon: Building2 },
+  { to: { name: 'projects' }, label: 'Projects', icon: FolderKanban },
+  ...(brand.teams
+    ? [{ to: { name: 'settings-organization' }, label: workspace.One, icon: Building2 }]
+    : []),
   { to: { name: 'settings-billing' }, label: 'Billing', icon: CreditCard },
   { to: { name: 'settings-account' }, label: 'Account', icon: UserRound },
 ]
 const adminNav = [
   { to: { name: 'admin-dashboard' }, label: 'Overview', icon: Gauge },
   { to: { name: 'admin-users' }, label: 'Users', icon: Users },
-  { to: { name: 'admin-organizations' }, label: 'Organizations', icon: Shield },
+  { to: { name: 'admin-organizations' }, label: workspace.Many, icon: Shield },
 ]
 const trackerUrl = import.meta.env.VITE_GLITCHTIP_URL
 
@@ -49,8 +54,8 @@ async function signOut() {
 <template>
   <div class="flex min-h-screen">
     <aside class="flex w-64 shrink-0 flex-col border-r bg-sidebar p-4">
-      <div class="mb-4 text-lg font-semibold">Quickstart SaaS</div>
-      <OrgSwitcher />
+      <div class="mb-4 text-lg font-semibold">{{ brand.name }}</div>
+      <OrgSwitcher v-if="brand.teams" />
       <nav class="mt-6 flex flex-col gap-1">
         <RouterLink
           v-for="item in nav"

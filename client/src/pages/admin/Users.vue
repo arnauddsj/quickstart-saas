@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { workspace } from '@/lib/brand'
 import { computed, ref } from 'vue'
 import { toast } from 'vue-sonner'
 import { authClient } from '@/lib/auth'
@@ -220,8 +221,8 @@ const isActive = (iso: string | null) =>
         <DialogHeader>
           <DialogTitle>Delete user</DialogTitle>
           <DialogDescription>
-            This permanently deletes {{ toDelete?.email }}, every organization they are the only
-            owner of, and its subscription. It cannot be undone.
+            This permanently deletes {{ toDelete?.email }}, every {{ workspace.one }} they are the
+            only owner of, and its subscription. It cannot be undone.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

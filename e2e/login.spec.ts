@@ -1,5 +1,6 @@
 // docs/email.md
 import { expect, test } from '@playwright/test'
+import { brand, completeOnboarding } from './onboarding'
 
 const MAILPIT_URL = process.env.MAILPIT_URL ?? 'http://localhost:8025'
 
@@ -32,12 +33,17 @@ test('magic link sign-in, onboarding, dashboard', async ({ page }) => {
   const link = await waitForMagicLink(email)
   await page.goto(link)
 
-  await page.waitForURL(/\/onboarding/)
-  await page.getByLabel(/organization name/i).fill('E2E Org')
-  await page.getByRole('button', { name: /create/i }).click()
+  await completeOnboarding(page, 'E2E Org')
 
-  await page.waitForURL(/\/$/)
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
   await expect(page.getByText(`Signed in as ${email}`)).toBeVisible()
-  await expect(page.getByRole('button', { name: 'E2E Org' })).toBeVisible()
+  if (brand.teams) {
+    await expect(page.getByRole('button', { name: 'E2E Org' })).toBeVisible()
+  } else {
+    const label = new RegExp(brand.workspace.one, 'i')
+    await expect(page.getByRole('link', { name: label })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: label })).toHaveCount(0)
+    await page.goto('/settings/organization')
+    await page.waitForURL(/\/$/)
+  }
 })

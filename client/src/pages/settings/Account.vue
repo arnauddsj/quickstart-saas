@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 import { authClient } from '@/lib/auth'
 import { actionHeaders, runAction } from '@/lib/monitoring'
+import { brand, workspace } from '@/lib/brand'
 import { errorMessage, trpc, useTRPCQuery } from '@/services/server'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -161,8 +162,12 @@ async function requestDeletion() {
       <CardHeader><CardTitle>Delete account</CardTitle></CardHeader>
       <CardContent class="space-y-3">
         <p class="text-sm text-muted-foreground">
-          Removes your account and every organization you are the only owner of, including its
-          subscription. Confirmed by email; cannot be undone.
+          <template v-if="brand.teams">
+            Removes your account and every {{ workspace.one }} you are the only owner of, including
+            its subscription.
+          </template>
+          <template v-else>Removes your account, all its data and its subscription.</template>
+          Confirmed by email; cannot be undone.
         </p>
         <p v-if="deletePending" class="text-sm">Check {{ user?.email }} to confirm.</p>
         <Button variant="destructive" :disabled="deletePending" @click="deleteOpen = true">
@@ -180,8 +185,8 @@ async function requestDeletion() {
             account.
           </DialogDescription>
         </DialogHeader>
-        <div v-if="preview.data.value?.organizationsToDelete.length" class="text-sm">
-          These organizations will be deleted with their data and subscriptions:
+        <div v-if="brand.teams && preview.data.value?.organizationsToDelete.length" class="text-sm">
+          These {{ workspace.many }} will be deleted with their data and subscriptions:
           <ul class="mt-2 list-disc pl-5">
             <li v-for="o in preview.data.value.organizationsToDelete" :key="o.id">{{ o.name }}</li>
           </ul>

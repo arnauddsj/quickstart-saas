@@ -1,5 +1,9 @@
 # Organizations
 
+Users see organizations as "workspaces", or whatever label
+[branding.md](branding.md) sets, and may not see them at all in solo mode. The code keeps
+better-auth's name.
+
 Every user belongs to at least one organization, the session remembers which one is
 active, and nothing org-scoped trusts an organization id sent by the client.
 

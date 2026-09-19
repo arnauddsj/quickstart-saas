@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { workspace } from '@/lib/brand'
 import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
@@ -71,7 +72,7 @@ function formatDate(iso: string | null) {
       <CardContent class="flex gap-2">
         <Skeleton v-if="subscription.isPending.value" class="h-9 w-40" />
         <p v-else-if="subscription.data.value && !canManage" class="text-sm text-muted-foreground">
-          Only owners and admins of this organization can change its plan.
+          Only owners and admins of this {{ workspace.one }} can change its plan.
         </p>
         <template v-else-if="subscription.data.value">
           <Button

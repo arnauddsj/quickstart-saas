@@ -1,5 +1,6 @@
 // docs/admin.md
 import { expect, test } from '@playwright/test'
+import { completeOnboarding } from './onboarding'
 
 const MAILPIT_URL = process.env.MAILPIT_URL ?? 'http://localhost:8025'
 
@@ -35,9 +36,7 @@ test('the first account is the admin and sees the admin overview', async ({ page
   })
   test.skip(me.role !== 'admin', 'database already has users; the first account is the admin')
 
-  await page.getByLabel(/organization name/i).fill('Admin Org')
-  await page.getByRole('button', { name: /create/i }).click()
-  await page.waitForURL(/\/$/)
+  await completeOnboarding(page, 'Admin Org')
 
   await page.getByRole('link', { name: 'Overview' }).click()
   await page.waitForURL(/\/admin$/)

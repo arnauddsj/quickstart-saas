@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { workspace } from '@/lib/brand'
 import { legal } from '@/data/legal'
 </script>
 
@@ -11,8 +12,8 @@ import { legal } from '@/data/legal'
       before any payment.
     </p>
     <p>
-      Subscriptions are billed per organization through Stripe and can be cancelled at any time from
-      Settings → Billing; access continues until the end of the paid period.
+      Subscriptions are billed per {{ workspace.one }} through Stripe and can be cancelled at any
+      time from Settings → Billing; access continues until the end of the paid period.
     </p>
     <p>
       Accounts can be deleted at any time from Settings → Account. Deletion is confirmed by email

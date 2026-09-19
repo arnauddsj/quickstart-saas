@@ -3,6 +3,7 @@ import type { RouteLocationNormalized } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { authClient } from '@/lib/auth'
 import { captureClientError, setMonitoringUser } from '@/lib/monitoring'
+import { brand } from '@/lib/brand'
 // docs/auth.md
 
 const RELOAD_KEY = 'chunk-reload-at'
@@ -21,6 +22,7 @@ export const router = createRouter({
           path: 'settings/organization',
           name: 'settings-organization',
           component: () => import('@/pages/settings/Organization.vue'),
+          meta: { requiresTeams: true },
         },
         {
           path: 'settings/account',
@@ -109,6 +111,7 @@ export const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
+  if (!brand.teams && to.matched.some((r) => r.meta.requiresTeams)) return { name: 'dashboard' }
   const requiresAuth = to.matched.some((r) => r.meta.requiresAuth)
   if (!requiresAuth) return true
 
@@ -151,6 +154,7 @@ declare module 'vue-router' {
     requiresAuth?: boolean
     requiresAdmin?: boolean
     requiresOrg?: boolean
+    requiresTeams?: boolean
     wide?: boolean
   }
 }

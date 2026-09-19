@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { workspace } from '@/lib/brand'
 import { trpc, useTRPCQuery } from '@/services/server'
 import {
   Table,
@@ -17,7 +18,7 @@ const organizations = useTRPCQuery(
 
 <template>
   <div class="flex flex-col gap-6">
-    <h1 class="text-2xl font-semibold">Organizations</h1>
+    <h1 class="text-2xl font-semibold">{{ workspace.Many }}</h1>
     <Table>
       <TableHeader>
         <TableRow>

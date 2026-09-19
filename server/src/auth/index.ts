@@ -2,6 +2,7 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { admin, magicLink, organization } from 'better-auth/plugins'
+import { brand } from '../config/brand.js'
 import { env, IS_PROD } from '../config/env.js'
 import { db } from '../db/client.js'
 import * as schema from '../db/schema/index.js'
@@ -9,6 +10,7 @@ import { createEmailProvider } from '../email/index.js'
 import { cleanupBeforeUserDelete } from '../services/account.js'
 import { roleForNewUser } from '../services/admin.js'
 import { reportError } from '../services/reportError.js'
+import { workspacePolicy } from '../services/workspacePolicy.js'
 
 export const emailProvider = createEmailProvider(env)
 
@@ -102,7 +104,7 @@ export const auth = betterAuth({
     }),
     admin({ defaultRole: 'member', adminRoles: ['admin'] }),
     organization({
-      allowUserToCreateOrganization: true,
+      ...workspacePolicy(brand.teams),
       creatorRole: 'owner',
       sendInvitationEmail: async ({ email, id, organization: org, inviter }) => {
         await sendEmail(

@@ -1,3 +1,4 @@
+import { workspace } from '@/lib/brand'
 import { flushPromises, mount } from '@vue/test-utils'
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
 import { createMemoryHistory, createRouter } from 'vue-router'
@@ -58,6 +59,6 @@ describe('Billing page', () => {
     const text = (await render('member')).text()
     expect(text).not.toContain('Upgrade to Pro')
     expect(text).not.toContain('Manage billing')
-    expect(text).toContain('Only owners and admins of this organization can change its plan.')
+    expect(text).toContain(`Only owners and admins of this ${workspace.one} can change its plan.`)
   })
 })

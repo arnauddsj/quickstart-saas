@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // docs/admin.md
+import { workspace } from '@/lib/brand'
 import { RouterLink } from 'vue-router'
 import { trpc, useTRPCQuery } from '@/services/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -23,7 +24,7 @@ const cards = [
   { key: 'newUsers30d', label: 'New, last 30 days' },
   { key: 'activeUsers7d', label: 'Active, last 7 days' },
   { key: 'activeUsers30d', label: 'Active, last 30 days' },
-  { key: 'organizations', label: 'Organizations' },
+  { key: 'organizations', label: workspace.Many },
   { key: 'paidSubscriptions', label: 'Paid subscriptions' },
 ] as const
 

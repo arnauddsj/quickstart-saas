@@ -1,6 +1,8 @@
 // docs/consent.md
+import { brand } from '@/lib/brand'
+
 export const legal = {
-  productName: 'Quickstart SaaS',
+  productName: brand.name,
   company: 'ACME SAS',
   address: '1 rue Exemple, 75001 Paris, France',
   registration: 'RCS Paris 000 000 000',

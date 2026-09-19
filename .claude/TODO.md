@@ -12,16 +12,25 @@ maintained, this file is not a history.
 
 ## 1. Before the first real feature in a new project
 
+- [ ] **Rename or delete the Projects reference feature.** It is a placeholder for the
+      product's first real entity and must not ship as "Projects". Follow
+      [`docs/reference-feature.md`](../docs/reference-feature.md) § Renaming it, before the
+      first deploy so migration `0003` can be regenerated.
+- [ ] **Set the brand.** Edit `server/src/config/brand.ts`: product name, support email,
+      accent color, the workspace label, and `teams: false` for a single-user product. See
+      [`docs/branding.md`](../docs/branding.md).
 - [ ] **Replace the placeholder plan shape.** `server/src/config/plans.ts` ships with a
-      `projects` limit and an `exports` feature so `planGuard` and `planLimit` have
-      something to exercise. Rename them to the product's real limits and delete
-      `billing.exportData`, which exists only to demonstrate the guard.
-- [ ] **Create the Loops templates** for `url` (magic link) and `url`,
-      `organizationName`, `inviterEmail` (invitation), then set the two template ids and
-      `EMAIL_PROVIDER=loops` on the host. Until then production sends through SMTP.
+      `projects` limit (used by the reference feature) and an `exports` feature so
+      `planGuard` has something to exercise. Rename them to the product's real limits and
+      delete `billing.exportData`, which exists only to demonstrate the guard.
+- [ ] **Create the Loops templates** for the entries in `server/src/email/templates.ts`
+      (variables listed in [`docs/email.md`](../docs/email.md)), then set
+      `LOOPS_TEMPLATE_IDS` and `EMAIL_PROVIDER=loops` on the host. Until then production
+      sends through SMTP with the built-in layout.
 - [ ] **Create the Stripe product and price**, set `STRIPE_PRICE_PRO_MONTHLY`, and point a
       webhook at `/webhooks/stripe`. With the placeholder ids every checkout fails.
-- [ ] **Rewrite the product statement** at the top of `CLAUDE.md` and `README.md`.
+- [ ] **Rewrite the product statement** at the top of `CLAUDE.md` and `README.md`, and
+      set the product name in `README.md` (`brand.ts` covers the app itself).
 - [ ] **Fill `client/src/data/legal.ts`** (entity, address, registration, host, contact) and
       rewrite `pages/legal/Terms.vue`; the privacy page is generated from it. Set
       `VITE_GA4_ID` / `VITE_CLARITY_ID` only once the policy names them.

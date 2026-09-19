@@ -47,7 +47,7 @@ The map is in [`docs/README.md`](docs/README.md). The shape:
 | Server (`server/src/`)                                                | Client (`client/src/`)                                     |
 | --------------------------------------------------------------------- | ---------------------------------------------------------- |
 | `index.ts` boots: migrate → pg-boss → listen; `app.ts` builds Fastify | `router/` with the auth guard; `layouts/` Auth and Default |
-| `config/env.ts` (zod, import-time), `config/plans.ts`                 | `services/server.ts`: tRPC client + Query helpers          |
+| `config/env.ts` (zod), `plans.ts`, `brand.ts`                         | `services/server.ts`: tRPC client + Query helpers          |
 | `auth/` better-auth + Fastify bridge                                  | `lib/auth.ts`: better-auth Vue client                      |
 | `trpc/index.ts` procedure tiers; `trpc/router/*`                      | `pages/` by route; `components/ui/` shadcn (generated)     |
 | `db/schema/auth.ts` generated, `db/schema/app.ts` yours               | `types/api.ts` derived from `AppRouter`                    |

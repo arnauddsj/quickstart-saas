@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { authClient } from '@/lib/auth'
+import { brand, workspace } from '@/lib/brand'
 import { errorMessage, queryClient } from '@/services/server'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,8 +16,9 @@ const personName = ref('')
 const name = ref('')
 const pending = ref(false)
 
+const workspaceName = computed(() => (brand.teams ? name.value.trim() : 'Personal'))
 const slug = computed(() =>
-  name.value
+  workspaceName.value
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, '-')
@@ -24,7 +26,7 @@ const slug = computed(() =>
 )
 
 async function create() {
-  if (!slug.value) return
+  if (!slug.value || pending.value) return
   pending.value = true
   try {
     if (askName.value && personName.value.trim()) {
@@ -32,10 +34,10 @@ async function create() {
       if (nameError) throw new Error(nameError.message ?? 'Could not save your name')
     }
     const { data, error } = await authClient.organization.create({
-      name: name.value.trim(),
+      name: workspaceName.value,
       slug: `${slug.value}-${Date.now().toString(36)}`,
     })
-    if (error || !data) throw new Error(error?.message ?? 'Could not create organization')
+    if (error || !data) throw new Error(error?.message ?? `Could not create the ${workspace.one}`)
     await authClient.organization.setActive({ organizationId: data.id })
     await queryClient.invalidateQueries()
     await router.replace({ name: 'dashboard' })
@@ -45,23 +47,37 @@ async function create() {
     pending.value = false
   }
 }
+
+watch(
+  () => session.value.data,
+  (data) => {
+    if (data && !brand.teams && !askName.value) void create()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
   <form class="flex flex-col gap-6" @submit.prevent="create">
-    <div>
-      <h1 class="text-xl font-semibold">Create your organization</h1>
+    <div v-if="brand.teams">
+      <h1 class="text-xl font-semibold">Create your {{ workspace.one }}</h1>
       <p class="text-sm text-muted-foreground">You need one to get started.</p>
+    </div>
+    <div v-else>
+      <h1 class="text-xl font-semibold">Welcome to {{ brand.name }}</h1>
+      <p class="text-sm text-muted-foreground">One last detail before you start.</p>
     </div>
     <div v-if="askName" class="flex flex-col gap-2">
       <Label for="person-name">Your name</Label>
       <Input id="person-name" v-model="personName" placeholder="Ada Lovelace" autocomplete="name" />
     </div>
-    <div class="flex flex-col gap-2">
-      <Label for="name">Organization name</Label>
+    <div v-if="brand.teams" class="flex flex-col gap-2">
+      <Label for="name">{{ workspace.One }} name</Label>
       <Input id="name" v-model="name" placeholder="Acme Inc." required />
       <p v-if="slug" class="text-xs text-muted-foreground">Slug: {{ slug }}</p>
     </div>
-    <Button type="submit" :disabled="pending || !slug">Create organization</Button>
+    <Button type="submit" :disabled="pending || !slug">
+      {{ brand.teams ? `Create ${workspace.one}` : 'Get started' }}
+    </Button>
   </form>
 </template>
