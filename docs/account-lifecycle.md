@@ -6,8 +6,8 @@ rename, change email, download their data, delete the account and what goes with
 Code: `server/src/auth/index.ts` (`user.changeEmail`, `user.deleteUser`),
 `server/src/services/account.ts` (`organizationsOwnedSolelyBy`, `cleanupBeforeUserDelete`,
 `exportUserData`), `server/src/trpc/router/user.ts` (`exportData`, `deletionPreview`,
-`getConsent`, `setConsent`), `server/src/email/types.ts` (`sendEmailChange`,
-`sendEmailVerification`, `sendAccountDeletion`), `client/src/pages/settings/Account.vue`. Spec:
+`getConsent`, `setConsent`), `server/src/email/templates.ts` (`emailChange`,
+`emailVerification`, `accountDeletion`), `client/src/pages/settings/Account.vue`. Spec:
 `server/src/__tests__/account.spec.ts`.
 
 ## Profile and email are better-auth endpoints, not tRPC
@@ -18,9 +18,9 @@ a tRPC mutation that accepts a user object, that is how mass assignment comes ba
 
 **An email change takes two links, and the old address goes first.**
 `authClient.changeEmail({ newEmail })` emails the current address
-(`sendChangeEmailConfirmation` → `EmailProvider.sendEmailChange`). Following that link
+(`sendChangeEmailConfirmation` → the `emailChange` email). Following that link
 sends a second mail to the new address (`emailVerification.sendVerificationEmail` →
-`EmailProvider.sendEmailVerification`), and only following the second one changes the row.
+the `emailVerification` email), and only following the second one changes the row.
 better-auth refuses the request outright when `emailVerification` is not configured
 ("Verification email isn't enabled"), which is why both callbacks exist. The order is what
 survives a stolen session: an attacker with a cookie cannot move the account to their own
@@ -29,7 +29,7 @@ address without reading the victim's mailbox, and cannot claim an address they d
 ## Deletion is confirmed by email and cleans up before the row goes
 
 `authClient.deleteUser({ callbackURL })` emails a link (`sendDeleteAccountVerification` →
-`EmailProvider.sendAccountDeletion`). Following it runs `beforeDelete`, then better-auth
+the `accountDeletion` email). Following it runs `beforeDelete`, then better-auth
 deletes the `user` row; sessions, accounts, memberships, invitations addressed to the user
 and the consent record follow by `ON DELETE CASCADE`.
 

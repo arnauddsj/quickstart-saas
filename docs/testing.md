@@ -37,8 +37,8 @@ accumulate databases. The development database is never touched.
 
 ## Email and Stripe never leave the process
 
-`mailbox.ts` replaces the email module: every `EmailProvider` call is recorded with its
-recipient and URL, and `lastMail(to, kind)` returns the link a real user would click.
+`mailbox.ts` replaces the email module: every `send` is recorded with its template name,
+recipient and URL, and `lastMail(to, template)` returns the link a real user would click.
 `signIn(app, email)` uses it to go through the real magic-link flow on a Fastify instance
 from `buildApp()` and returns the cookie header. Stripe webhooks are signed with the SDK's
 `generateTestHeaderString`, so the raw-body parser and the signature check run for real;

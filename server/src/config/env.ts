@@ -34,11 +34,7 @@ const schema = z.object({
   SMTP_HOST: z.string().default('localhost'),
   SMTP_PORT: z.coerce.number().int().default(1025),
   LOOPS_API_KEY: z.string().optional(),
-  LOOPS_MAGIC_LINK_TEMPLATE_ID: z.string().optional(),
-  LOOPS_INVITATION_TEMPLATE_ID: z.string().optional(),
-  LOOPS_EMAIL_CHANGE_TEMPLATE_ID: z.string().optional(),
-  LOOPS_EMAIL_VERIFICATION_TEMPLATE_ID: z.string().optional(),
-  LOOPS_ACCOUNT_DELETION_TEMPLATE_ID: z.string().optional(),
+  LOOPS_TEMPLATE_IDS: z.string().optional(),
   STRIPE_SECRET_KEY: z.string().default(devDefault('STRIPE_SECRET_KEY', 'sk_test_placeholder')),
   STRIPE_WEBHOOK_SECRET: z
     .string()
@@ -68,8 +64,13 @@ export function parseEnv(source: Record<string, string | undefined> = process.en
       'COOKIE_SECURE must be true in production unless PUBLIC_URL is http://localhost',
     )
   }
-  if (env.EMAIL_PROVIDER === 'loops' && !(env.LOOPS_API_KEY && env.LOOPS_MAGIC_LINK_TEMPLATE_ID)) {
-    throw new Error('EMAIL_PROVIDER=loops needs LOOPS_API_KEY and LOOPS_MAGIC_LINK_TEMPLATE_ID')
+  if (
+    env.EMAIL_PROVIDER === 'loops' &&
+    !(env.LOOPS_API_KEY && /(^|,)\s*magicLink\s*=/.test(env.LOOPS_TEMPLATE_IDS ?? ''))
+  ) {
+    throw new Error(
+      'EMAIL_PROVIDER=loops needs LOOPS_API_KEY and a magicLink id in LOOPS_TEMPLATE_IDS',
+    )
   }
   return env
 }

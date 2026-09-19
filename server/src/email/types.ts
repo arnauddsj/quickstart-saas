@@ -1,13 +1,6 @@
 // docs/email.md
+import type { TemplateData, TemplateName } from './templates.js'
+
 export interface EmailProvider {
-  sendMagicLink(input: { to: string; url: string }): Promise<void>
-  sendInvitation(input: {
-    to: string
-    url: string
-    organizationName: string
-    inviterEmail: string
-  }): Promise<void>
-  sendEmailChange(input: { to: string; url: string; newEmail: string }): Promise<void>
-  sendEmailVerification(input: { to: string; url: string }): Promise<void>
-  sendAccountDeletion(input: { to: string; url: string }): Promise<void>
+  send<K extends TemplateName>(template: K, to: string, data: TemplateData<K>): Promise<void>
 }

@@ -1,22 +1,15 @@
 // docs/testing.md
 import type { EmailProvider } from '../../email/types.js'
+import type { TemplateName } from '../../email/templates.js'
 
-export type Mail = { kind: keyof EmailProvider; to: string; url: string }
+export type Mail = { kind: TemplateName; to: string; url: string }
 
 export const sent: Mail[] = []
 
-const record =
-  (kind: keyof EmailProvider) =>
-  async (input: { to: string; url: string }): Promise<void> => {
-    sent.push({ kind, to: input.to, url: input.url })
-  }
-
 export const provider: EmailProvider = {
-  sendMagicLink: record('sendMagicLink'),
-  sendInvitation: record('sendInvitation'),
-  sendEmailChange: record('sendEmailChange'),
-  sendEmailVerification: record('sendEmailVerification'),
-  sendAccountDeletion: record('sendAccountDeletion'),
+  async send(kind, to, data) {
+    sent.push({ kind, to, url: data.url })
+  },
 }
 
 export const emailModule = { createEmailProvider: () => provider }

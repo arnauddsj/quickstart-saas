@@ -61,7 +61,7 @@ describe('magic-link sign-in through the Fastify bridge', () => {
 
   it('accepts a verify link only once', async () => {
     await requestMagicLink(app, 'once@test.io')
-    const link = lastMail('once@test.io', 'sendMagicLink').url
+    const link = lastMail('once@test.io', 'magicLink').url
 
     const first = await followLink(app, link)
     expect(cookieHeader(first.headers['set-cookie'])).toContain('better-auth.session_token=')
@@ -101,7 +101,7 @@ describe('admin actions apply on the next request', () => {
     expect((await trpcQuery(app, 'user.me', member)).code).toBe('UNAUTHORIZED')
 
     await requestMagicLink(app, 'member@test.io')
-    const verify = await followLink(app, lastMail('member@test.io', 'sendMagicLink').url)
+    const verify = await followLink(app, lastMail('member@test.io', 'magicLink').url)
     expect(cookieHeader(verify.headers['set-cookie'])).not.toContain('better-auth.session_token=')
   })
 })
@@ -115,11 +115,11 @@ describe('email change', () => {
     })
     expect(res.statusCode).toBe(200)
 
-    await followLink(app, lastMail('old@test.io', 'sendEmailChange').url, cookie)
+    await followLink(app, lastMail('old@test.io', 'emailChange').url, cookie)
     expect(await userByEmail('old@test.io')).toBeDefined()
     expect(await userByEmail('new@test.io')).toBeUndefined()
 
-    await followLink(app, lastMail('new@test.io', 'sendEmailVerification').url, cookie)
+    await followLink(app, lastMail('new@test.io', 'emailVerification').url, cookie)
     const moved = await userByEmail('new@test.io')
     expect(moved).toMatchObject({ email: 'new@test.io', emailVerified: true })
     expect(await userByEmail('old@test.io')).toBeUndefined()
@@ -147,7 +147,7 @@ describe('account deletion', () => {
     expect(requested.statusCode).toBe(200)
     expect(await userByEmail('leaver@test.io')).toBeDefined()
 
-    await followLink(app, lastMail('leaver@test.io', 'sendAccountDeletion').url, withOrg)
+    await followLink(app, lastMail('leaver@test.io', 'accountDeletion').url, withOrg)
 
     expect(await userByEmail('leaver@test.io')).toBeUndefined()
     expect(await rowCount(schema.session, eq(schema.session.userId, user!.id))).toBe(0)

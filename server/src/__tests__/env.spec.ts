@@ -72,7 +72,7 @@ describe('parseEnv', () => {
         ...base,
         EMAIL_PROVIDER: 'loops',
         LOOPS_API_KEY: 'k',
-        LOOPS_MAGIC_LINK_TEMPLATE_ID: 't',
+        LOOPS_TEMPLATE_IDS: 'magicLink=t',
       }).EMAIL_PROVIDER,
     ).toBe('loops')
   })

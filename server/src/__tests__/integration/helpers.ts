@@ -154,7 +154,7 @@ export async function signIn(app: App, email: string): Promise<string> {
   const res = await requestMagicLink(app, email)
   if (res.statusCode !== 200)
     throw new Error(`magic link request failed: ${res.statusCode} ${res.body}`)
-  const verify = await followLink(app, lastMail(email, 'sendMagicLink').url)
+  const verify = await followLink(app, lastMail(email, 'magicLink').url)
   const cookie = cookieHeader(verify.headers['set-cookie'])
   if (!cookie.includes('better-auth.session_token=')) {
     throw new Error(

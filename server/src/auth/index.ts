@@ -45,7 +45,7 @@ export const auth = betterAuth({
     sendVerificationEmail: async ({ user, url }) => {
       await sendEmail(
         'verification',
-        () => emailProvider.sendEmailVerification({ to: user.email, url }),
+        () => emailProvider.send('emailVerification', user.email, { url }),
         user.id,
       )
     },
@@ -56,7 +56,7 @@ export const auth = betterAuth({
       sendChangeEmailConfirmation: async ({ user, newEmail, url }) => {
         await sendEmail(
           'email_change',
-          () => emailProvider.sendEmailChange({ to: user.email, url, newEmail }),
+          () => emailProvider.send('emailChange', user.email, { url, newEmail }),
           user.id,
         )
       },
@@ -66,7 +66,7 @@ export const auth = betterAuth({
       sendDeleteAccountVerification: async ({ user, url }) => {
         await sendEmail(
           'account_deletion',
-          () => emailProvider.sendAccountDeletion({ to: user.email, url }),
+          () => emailProvider.send('accountDeletion', user.email, { url }),
           user.id,
         )
       },
@@ -97,7 +97,7 @@ export const auth = betterAuth({
     magicLink({
       expiresIn: 15 * 60,
       sendMagicLink: async ({ email, url }) => {
-        await sendEmail('magic_link', () => emailProvider.sendMagicLink({ to: email, url }))
+        await sendEmail('magic_link', () => emailProvider.send('magicLink', email, { url }))
       },
     }),
     admin({ defaultRole: 'member', adminRoles: ['admin'] }),
@@ -108,8 +108,7 @@ export const auth = betterAuth({
         await sendEmail(
           'invitation',
           () =>
-            emailProvider.sendInvitation({
-              to: email,
+            emailProvider.send('invitation', email, {
               url: `${env.PUBLIC_URL}/accept-invitation/${id}`,
               organizationName: org.name,
               inviterEmail: inviter.user.email,

@@ -101,7 +101,7 @@ describe('user levers', () => {
 
     const row = await db.query.user.findFirst({ where: eq(schema.user.id, target.id) })
     expect(row).toMatchObject({ email: 'after@test.io', emailVerified: false })
-    expect(lastMail('after@test.io', 'sendEmailVerification').url).toContain('verify-email')
+    expect(lastMail('after@test.io', 'emailVerification').url).toContain('verify-email')
   })
 
   it("refuses another account's address but accepts the user's own", async () => {
