@@ -53,7 +53,10 @@ curl -s 'http://localhost:8025/api/v1/message/<ID>'      # .Text contains the li
 
 The UI is on the same port. In production `smtp` still works against any relay that
 accepts unauthenticated submission from the container network; add auth to
-`SmtpProvider` when a relay needs it.
+`SmtpProvider` when a relay needs it. `parseEnv` refuses `smtp` in production without an
+explicit `SMTP_HOST`: the production overlay used to default it to Mailpit, so real users
+got no login mail while their links sat in a web UI. The production overlay no longer
+starts Mailpit except under the `local-mail` profile; see [deployment.md](deployment.md).
 
 ## Loops maps template names to ids
 

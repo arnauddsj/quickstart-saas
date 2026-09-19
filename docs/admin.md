@@ -3,7 +3,7 @@
 Everything an operator needs to run the product without opening the database: who signed
 up, who is active, and the levers on a single account.
 
-Code: `server/src/services/admin.ts` (`roleForNewUser`, `adminStats`, `userActivity`,
+Code: `server/src/services/admin.ts` (`claimFirstAdmin`, `adminStats`, `userActivity`,
 `userOrganizations`, `recentSignups`), `server/src/trpc/router/admin.ts`,
 `server/src/auth/index.ts` (`databaseHooks.user.create.before`),
 `server/src/scripts/make-admin.ts`, `client/src/pages/admin/Dashboard.vue`,
@@ -11,15 +11,17 @@ Code: `server/src/services/admin.ts` (`roleForNewUser`, `adminStats`, `userActiv
 
 ## The first account to sign up is the admin
 
-`databaseHooks.user.create.before` in `auth/index.ts` asks `roleForNewUser()`, which
-returns `admin` when the `user` table is empty and `member` otherwise. The first person
-through the magic link on a fresh database is therefore the operator, with no SQL and no
-script. Every later account is a member until an admin promotes it from the Users page.
+Every account is created as a `member`. `databaseHooks.user.create.after` in
+`auth/index.ts` then calls `claimFirstAdmin(user.id)`, which promotes the account only if
+no admin exists yet and it is the earliest row in `user`. The first person through the
+magic link on a fresh database is therefore the operator, with no SQL and no script.
+Every later account stays a member until an admin promotes it from the Users page.
 
-The honest caveat: two accounts created in the same instant on an empty table could both
-count zero. On a brand-new deployment that window is yours alone; if it worries you, make
-the first sign-in before sharing the URL. `pnpm make-admin <email>` remains as the fallback
-for a database whose first user is gone.
+**The check and the promotion run under `pg_advisory_xact_lock(FIRST_ADMIN_LOCK_ID)`.**
+The old rule counted users in the `before` hook, and 25 simultaneous first sign-ups
+produced up to 23 admins; the count and the insert were never atomic. Under the lock
+exactly one claim wins. The "earliest row" condition means that deleting every admin
+does not hand the role to the next sign-up; `pnpm make-admin <email>` is the way back.
 
 ## Activity is derived from sessions, not stored on the user
 
@@ -32,7 +34,8 @@ When sessions expire (7 days) or are revoked, the person stops counting as activ
 the honest reading.
 
 `adminStats` also counts users created in the last 7 and 30 days, organizations, and
-subscriptions whose plan is not `FREE` and whose status is `active`.
+subscriptions whose plan is not `FREE` and whose status is `active`. Trends, retention,
+activation and plan fit live on the Analytics page; see [analytics.md](analytics.md).
 
 ## Every user lever is a tRPC mutation on `adminProcedure`
 

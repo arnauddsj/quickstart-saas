@@ -63,7 +63,7 @@ cookie, and the cookie lands on a host the browser never visits.
 | `AUTH_SECRET`                                | dev placeholder                          | 32+ chars. Rotating it signs everyone out.                                                         |
 | `COOKIE_SECURE`                              | `false`                                  | Must be `true` in production.                                                                      |
 | `EMAIL_PROVIDER`                             | `smtp`                                   | `smtp` or `loops`; no fallback between them, see [email.md](email.md).                             |
-| `EMAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`       | `noreply@localhost`, `localhost`, `1025` | Mailpit locally.                                                                                   |
+| `EMAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`       | `noreply@localhost`, `localhost`, `1025` | Mailpit locally. In production `smtp` needs an explicit `SMTP_HOST` or boot fails.                 |
 | `LOOPS_API_KEY`, `LOOPS_TEMPLATE_IDS`        | unset                                    | Required when `EMAIL_PROVIDER=loops`; ids as `magicLink=…,invitation=…`, see [email.md](email.md). |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | dev placeholders                         | See [billing.md](billing.md).                                                                      |
 | `STRIPE_PRICE_PRO_MONTHLY`                   | placeholder id                           | Not a secret; maps to `PLANS.PRO`.                                                                 |

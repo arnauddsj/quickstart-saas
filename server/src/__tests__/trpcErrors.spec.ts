@@ -14,6 +14,7 @@ async function respond(env: 'test' | 'production', path: string, input?: unknown
     vi.stubEnv('STRIPE_SECRET_KEY', 'sk_live_x')
     vi.stubEnv('STRIPE_WEBHOOK_SECRET', 'whsec_x')
     vi.stubEnv('COOKIE_SECURE', 'true')
+    vi.stubEnv('SMTP_HOST', 'smtp.example.com')
   }
   const { z } = await import('zod')
   const { fetchRequestHandler } = await import('@trpc/server/adapters/fetch')

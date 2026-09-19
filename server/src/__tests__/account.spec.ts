@@ -50,6 +50,9 @@ vi.mock('../services/stripe.js', () => ({
   stripe: { subscriptions: { cancel }, customers: { del } },
 }))
 
+const anonymizeUsage = vi.fn(async (_userId: string) => {})
+vi.mock('../services/usage.js', () => ({ anonymizeUsage }))
+
 const { organizationsOwnedSolelyBy, cleanupBeforeUserDelete } =
   await import('../services/account.js')
 
@@ -60,6 +63,7 @@ describe('account deletion cleanup', () => {
     subscriptionByOrg.clear()
     cancel.mockClear()
     del.mockClear()
+    anonymizeUsage.mockClear()
   })
 
   it('returns nothing for a user who owns no organization', async () => {
@@ -88,6 +92,7 @@ describe('account deletion cleanup', () => {
     expect(cancel).toHaveBeenCalledWith('sub_1')
     expect(del).toHaveBeenCalledWith('cus_1')
     expect(deleted).toHaveLength(1)
+    expect(anonymizeUsage).toHaveBeenCalledWith('u1')
   })
 
   it('refuses to delete when Stripe cancellation fails, so no orphaned paid subscription survives', async () => {
@@ -96,5 +101,6 @@ describe('account deletion cleanup', () => {
     cancel.mockRejectedValueOnce(new Error('stripe down'))
     await expect(cleanupBeforeUserDelete('u1')).rejects.toThrow('stripe down')
     expect(deleted).toHaveLength(0)
+    expect(anonymizeUsage).not.toHaveBeenCalled()
   })
 })

@@ -30,8 +30,9 @@ Two images built from the repository root, orchestrated by
 docker compose -f docker-compose.yaml -f docker-compose.prod.yaml up -d --build
 ```
 
-Required variables are listed in `server/.env.example`; Compose refuses to start without
-them.
+Required variables are listed in `server/.env.example`, plus `POSTGRES_PASSWORD`; Compose
+refuses to start without them. Only the client port is published; see
+[`docs/deployment.md`](docs/deployment.md).
 
 ## Where things are explained
 

@@ -5,6 +5,7 @@ import {
   createPortalSession,
   getOrCreateSubscription,
 } from '../../services/stripe.js'
+import { track } from '../../services/usage.js'
 import { orgAdminProcedure, orgProcedure, router } from '../index.js'
 
 export const billingRouter = router({
@@ -19,13 +20,15 @@ export const billingRouter = router({
     }
   }),
 
-  createCheckout: orgAdminProcedure.mutation(async ({ ctx }) => ({
-    url: await createCheckoutSession({
+  createCheckout: orgAdminProcedure.mutation(async ({ ctx }) => {
+    const url = await createCheckoutSession({
       organizationId: ctx.organizationId,
       plan: 'PRO',
       customerEmail: ctx.user.email,
-    }),
-  })),
+    })
+    await track(ctx.user.id, ctx.organizationId, 'billing.checkout_started')
+    return { url }
+  }),
 
   createPortal: orgAdminProcedure.mutation(async ({ ctx }) => ({
     url: await createPortalSession(ctx.organizationId),

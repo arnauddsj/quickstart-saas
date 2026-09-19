@@ -36,7 +36,8 @@ Skipping the first call throws `Queue … does not exist` on the second, at boot
 4. Enqueue from anywhere with `boss.send(QUEUE, data)`; the handler receives an array of
    jobs in v12, so read `jobs[0].data` or loop.
 
-`notificationCleanup.ts` is the other periodic job: it deletes notifications past their
+`usageRetention.ts` deletes usage statistics past 25 months at 04:15 UTC
+([analytics.md](analytics.md)). `notificationCleanup.ts` is the other periodic job: it deletes notifications past their
 retention every day at 04:00 UTC ([notifications.md](notifications.md)).
 
 `heartbeat.ts` is the worked example: one queue, one wrapped worker, one `*/5 * * * *`

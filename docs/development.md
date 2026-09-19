@@ -29,6 +29,14 @@ because Compose interpolates `${VAR:?}` for every service in a file, even one a 
 would skip, so production's required secrets would have blocked `docker compose up` in
 development.
 
+## Each clone is its own Compose project
+
+The compose file sets no project name and no volume name, so both come from the directory:
+a clone in `acme/` gets the `acme` project and the `acme_postgres_data` volume. Ports are
+published on `127.0.0.1` only. A checkout created before this change has its data in
+`quickstart_postgres_data`; put `COMPOSE_PROJECT_NAME=quickstart` in the root `.env` to
+keep using it.
+
 ## Ports collide with other projects, and the fix is the root `.env`
 
 Every project on a laptop wants 5432, 1025 and 8025. The compose file reads

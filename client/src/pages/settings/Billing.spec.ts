@@ -55,6 +55,19 @@ describe('Billing page', () => {
     }
   })
 
+  it('sends a past-due workspace to the portal instead of a second checkout', async () => {
+    trpc.billing.getSubscription.query.mockResolvedValue({
+      plan: 'FREE',
+      status: 'past_due',
+      currentPeriodEnd: null,
+      cancelAtPeriodEnd: false,
+      hasStripeCustomer: true,
+    })
+    const text = (await render('owner')).text()
+    expect(text).not.toContain('Upgrade to Pro')
+    expect(text).toContain('Manage billing')
+  })
+
   it('explains to a member why the plan cannot be changed, instead of a button that fails', async () => {
     const text = (await render('member')).text()
     expect(text).not.toContain('Upgrade to Pro')

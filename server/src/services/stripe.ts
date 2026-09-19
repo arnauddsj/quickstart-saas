@@ -20,6 +20,9 @@ function assertBillingConfigured() {
   }
 }
 
+const isPaying = (status: string | null) => status === 'active' || status === 'trialing'
+const hasLiveSubscription = (status: string | null) => isPaying(status) || status === 'past_due'
+
 export async function getOrCreateSubscription(organizationId: string) {
   const existing = await db.query.subscription.findFirst({
     where: eq(subscription.organizationId, organizationId),
@@ -42,11 +45,10 @@ async function ensureStripeCustomer(organizationId: string, email: string): Prom
   const sub = await getOrCreateSubscription(organizationId)
   if (sub.stripeCustomerId) return sub.stripeCustomerId
   const org = await db.query.organization.findFirst({ where: eq(organization.id, organizationId) })
-  const customer = await stripe.customers.create({
-    email,
-    name: org?.name,
-    metadata: { organizationId },
-  })
+  const customer = await stripe.customers.create(
+    { email, name: org?.name, metadata: { organizationId } },
+    { idempotencyKey: `customer-${organizationId}` },
+  )
   await db
     .update(subscription)
     .set({ stripeCustomerId: customer.id })
@@ -60,6 +62,13 @@ export async function createCheckoutSession(input: {
   customerEmail: string
 }): Promise<string> {
   assertBillingConfigured()
+  const current = await getOrCreateSubscription(input.organizationId)
+  if (current.stripeSubscriptionId && hasLiveSubscription(current.status)) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'This workspace already has a subscription; manage it in the billing portal',
+    })
+  }
   const priceId = PLANS[input.plan].stripePriceId
   const customer = await ensureStripeCustomer(input.organizationId, input.customerEmail)
   const session = await stripe.checkout.sessions.create({
@@ -94,9 +103,20 @@ export async function createPortalSession(organizationId: string): Promise<strin
 export async function applyStripeSubscription(stripeSub: Stripe.Subscription): Promise<void> {
   const organizationId = stripeSub.metadata.organizationId
   if (!organizationId) return
+  const [org, current] = await Promise.all([
+    db.query.organization.findFirst({ where: eq(organization.id, organizationId) }),
+    db.query.subscription.findFirst({ where: eq(subscription.organizationId, organizationId) }),
+  ])
+  if (!org) return
+  if (
+    current?.stripeSubscriptionId &&
+    current.stripeSubscriptionId !== stripeSub.id &&
+    isPaying(current.status) &&
+    !isPaying(stripeSub.status)
+  )
+    return
   const item = stripeSub.items.data[0]
-  const active = stripeSub.status === 'active' || stripeSub.status === 'trialing'
-  const plan = active ? planFromPriceId(item?.price.id) : 'FREE'
+  const plan = isPaying(stripeSub.status) ? planFromPriceId(item?.price.id) : 'FREE'
   const customerId =
     typeof stripeSub.customer === 'string' ? stripeSub.customer : stripeSub.customer.id
   const periodEnd = item?.current_period_end ? new Date(item.current_period_end * 1000) : null

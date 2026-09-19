@@ -6,8 +6,20 @@ import { logger } from '../utils/logger.js'
 
 const migrationsFolder = fileURLToPath(new URL('../../drizzle', import.meta.url))
 
+export const MIGRATION_LOCK_ID = 727_146_001
+
 export async function runMigrations(): Promise<void> {
-  await migrate(db, { migrationsFolder })
+  const client = await pool.connect()
+  try {
+    await client.query('select pg_advisory_lock($1)', [MIGRATION_LOCK_ID])
+    try {
+      await migrate(db, { migrationsFolder })
+    } finally {
+      await client.query('select pg_advisory_unlock($1)', [MIGRATION_LOCK_ID])
+    }
+  } finally {
+    client.release()
+  }
   logger.info({ migrationsFolder }, 'migrations applied')
 }
 

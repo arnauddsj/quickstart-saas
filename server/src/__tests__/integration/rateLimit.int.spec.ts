@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 
 vi.hoisted(() => {
   process.env.NODE_ENV = 'production'
+  process.env.SMTP_HOST = 'localhost'
 })
 import type { App } from './helpers.js'
 import { ORIGIN, resetDatabase } from './helpers.js'
@@ -50,6 +51,49 @@ describe('better-auth rate limits in production', () => {
       statuses.add(res.statusCode)
     }
     expect([...statuses]).toEqual([200])
+  })
+
+  it('keeps the session check out of the Fastify budget too, which still limits other routes', async () => {
+    const check = () =>
+      app.inject({
+        method: 'GET',
+        url: '/api/auth/get-session',
+        headers: { 'x-forwarded-for': '203.0.113.11' },
+      })
+    const statuses = new Set<number>()
+    for (let i = 0; i < 310; i++) statuses.add((await check()).statusCode)
+    expect([...statuses]).toEqual([200])
+
+    let last = 0
+    for (let i = 0; i < 301; i++) {
+      last = (
+        await app.inject({
+          method: 'GET',
+          url: '/health/ready',
+          headers: { 'x-forwarded-for': '203.0.113.12' },
+        })
+      ).statusCode
+    }
+    expect(last).toBe(429)
+  })
+
+  it('ignores X-Forwarded-For from a peer TRUST_PROXY does not name', async () => {
+    const codes = []
+    for (let i = 0; i < 6; i++) {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/auth/sign-in/magic-link',
+        remoteAddress: '198.51.100.77',
+        headers: {
+          origin: ORIGIN,
+          'content-type': 'application/json',
+          'x-forwarded-for': `10.9.0.${i}`,
+        },
+        payload: { email: `spoof${i}@test.io`, callbackURL: '/auth/callback' },
+      })
+      codes.push(res.statusCode)
+    }
+    expect(codes).toEqual([200, 200, 200, 200, 200, 429])
   })
 
   it('allows five magic links an hour per address, then answers 429', async () => {

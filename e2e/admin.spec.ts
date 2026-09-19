@@ -44,6 +44,16 @@ test('the first account is the admin and sees the admin overview', async ({ page
   await expect(page.getByText('Users', { exact: true }).first()).toBeVisible()
   await expect(page.getByText(email)).toBeVisible()
 
+  await page.getByRole('link', { name: 'Analytics' }).click()
+  await page.waitForURL(/\/admin\/analytics$/)
+  await expect(page.getByRole('heading', { name: 'Analytics' })).toBeVisible()
+  await expect(page.getByText('Retention by sign-up week')).toBeVisible()
+  await expect(page.getByRole('img', { name: 'Active users per week' })).toBeVisible()
+  if (process.env.SCREENSHOT_DIR) {
+    await page.screenshot({ path: `${process.env.SCREENSHOT_DIR}/analytics.png`, fullPage: true })
+  }
+  await page.getByRole('link', { name: 'Overview' }).click()
+
   await page.getByRole('link', { name: 'Manage users' }).click()
   await page.waitForURL(/\/admin\/users/)
   await expect(page.getByRole('cell', { name: email })).toBeVisible()

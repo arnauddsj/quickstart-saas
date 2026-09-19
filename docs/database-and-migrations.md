@@ -5,7 +5,7 @@ rehearsed locally before a deploy applies it.
 
 Code: `server/src/db/client.ts` (`db`, `pool`), `db/schema/auth.ts` (generated),
 `db/schema/app.ts` (`subscription`, `userConsent`, `PLAN_NAMES`),
-`db/schema/index.ts`, `db/migrate.ts` (`runMigrations`), `server/drizzle.config.ts`,
+`db/schema/index.ts`, `db/migrate.ts` (`runMigrations`, `MIGRATION_LOCK_ID`), `server/drizzle.config.ts`,
 `server/drizzle/*.sql`.
 
 ## `auth.ts` is generated; never edit it by hand
@@ -52,13 +52,15 @@ the container log for `migration failed` first.
 same code finds `server/drizzle/` when run from `src/` under tsx and from `dist/` under
 Node in the image. The Dockerfile copies `drizzle/` next to `dist/` for that reason.
 
-## There is no advisory lock across replicas
+## Replicas take turns through an advisory lock
 
-Drizzle's migrator does not lock. Two containers booting at once against the same
-database can both try to apply the same file; one fails and restarts, which is harmless
-for additive migrations and not for others. The template runs one instance. Before
-scaling out, add a `pg_advisory_lock` around `runMigrations()` or move migrations to a
-release step; this is tracked in [`.claude/TODO.md`](../.claude/TODO.md).
+Drizzle's migrator does not lock. `runMigrations()` takes the session-level
+`pg_advisory_lock(MIGRATION_LOCK_ID)` on a dedicated connection first, so two containers
+booting together (two replicas, or the old and new instance overlapping in a deploy)
+apply migrations one after the other; the second finds nothing left to do. The lock is
+released in a `finally`, and Postgres drops it anyway if the process dies.
+`migrate.int.spec.ts` holds the lock from another connection and checks that
+`runMigrations()` waits.
 
 ## The rejected alternative
 

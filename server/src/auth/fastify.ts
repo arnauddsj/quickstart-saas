@@ -11,6 +11,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     async handler(request, reply) {
       const url = new URL(request.url, env.PUBLIC_URL)
       const headers = fromNodeHeaders(request.headers)
+      headers.set('x-forwarded-for', request.ip)
       const body = request.body ? JSON.stringify(request.body) : undefined
       const response = await auth.handler(
         new Request(url, { method: request.method, headers, body }),

@@ -64,6 +64,9 @@ export function parseEnv(source: Record<string, string | undefined> = process.en
       'COOKIE_SECURE must be true in production unless PUBLIC_URL is http://localhost',
     )
   }
+  if (env.NODE_ENV === 'production' && env.EMAIL_PROVIDER === 'smtp' && !withoutEmpty.SMTP_HOST) {
+    throw new Error('EMAIL_PROVIDER=smtp needs SMTP_HOST in production')
+  }
   if (
     env.EMAIL_PROVIDER === 'loops' &&
     !(env.LOOPS_API_KEY && /(^|,)\s*magicLink\s*=/.test(env.LOOPS_TEMPLATE_IDS ?? ''))

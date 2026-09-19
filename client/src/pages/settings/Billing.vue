@@ -76,7 +76,10 @@ function formatDate(iso: string | null) {
         </p>
         <template v-else-if="subscription.data.value">
           <Button
-            v-if="subscription.data.value.plan !== 'PRO'"
+            v-if="
+              subscription.data.value.plan !== 'PRO' &&
+              subscription.data.value.status !== 'past_due'
+            "
             :disabled="checkout.isPending.value"
             @click="checkout.mutate()"
           >

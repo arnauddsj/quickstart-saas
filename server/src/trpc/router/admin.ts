@@ -7,12 +7,15 @@ import { db } from '../../db/client.js'
 import { organization, session, user } from '../../db/schema/index.js'
 import { cleanupBeforeUserDelete } from '../../services/account.js'
 import { adminStats, recentSignups, userActivity, userOrganizations } from '../../services/admin.js'
+import { productAnalytics } from '../../services/analytics.js'
 import { adminProcedure, router } from '../index.js'
 
 const roleSchema = z.enum(['admin', 'member'])
 const iso = (d: Date | null | undefined) => d?.toISOString() ?? null
 
 export const adminRouter = router({
+  analytics: adminProcedure.query(() => productAnalytics()),
+
   stats: adminProcedure.query(async () => ({
     ...(await adminStats()),
     recentSignups: await recentSignups(8),

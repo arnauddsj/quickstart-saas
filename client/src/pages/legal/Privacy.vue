@@ -53,6 +53,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
     </Card>
 
     <Card>
+      <CardHeader><CardTitle>Usage statistics</CardTitle></CardHeader>
+      <CardContent class="space-y-2 text-sm">
+        <p>
+          To understand how the product is used and improve it, we record on our own servers the
+          days on which you use the app while signed in and the main actions you take (for example
+          creating a project), linked to the internal identifiers of your account and
+          {{ workspace.one }}. No cookie, script or third party is involved, and nothing you type is
+          recorded.
+        </p>
+        <p>
+          These records are kept for {{ legal.usageStatistics.retentionMonths }} months, on the
+          basis of our legitimate interest in running and improving the service. When you delete
+          your account, they are anonymized: your identifier is replaced by a random one that cannot
+          be traced back to you.
+        </p>
+      </CardContent>
+    </Card>
+
+    <Card>
       <CardHeader><CardTitle>Analytics tools</CardTitle></CardHeader>
       <CardContent class="space-y-3 text-sm">
         <table class="w-full text-left">

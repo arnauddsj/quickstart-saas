@@ -1,7 +1,7 @@
 import { TRPCError } from '@trpc/server'
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { adminStats, roleForNewUser } from '../../services/admin.js'
+import { adminStats, claimFirstAdmin } from '../../services/admin.js'
 import {
   addMember,
   callerFor,
@@ -33,10 +33,21 @@ beforeEach(async () => {
 })
 
 describe('first account', () => {
-  it('is admin only while the user table is empty', async () => {
-    expect(await roleForNewUser()).toBe('admin')
-    await seedUser()
-    expect(await roleForNewUser()).toBe('member')
+  it('promotes only the earliest account, however many claim at once', async () => {
+    const users = []
+    for (let i = 0; i < 10; i++) users.push(await seedUser({ createdAt: daysAgo(10 - i) }))
+
+    const claims = await Promise.all(users.map((u) => claimFirstAdmin(u.id)))
+
+    expect(claims.filter(Boolean)).toHaveLength(1)
+    expect(claims[0]).toBe(true)
+    expect(await rowCount(schema.user, eq(schema.user.role, 'admin'))).toBe(1)
+  })
+
+  it('does not hand admin to a newcomer after every admin is gone', async () => {
+    await seedUser({ createdAt: daysAgo(5) })
+    const newcomer = await seedUser()
+    expect(await claimFirstAdmin(newcomer.id)).toBe(false)
   })
 })
 

@@ -9,6 +9,7 @@ import { auth } from '../auth/index.js'
 import { IS_PROD } from '../config/env.js'
 import { db } from '../db/client.js'
 import { member } from '../db/schema/index.js'
+import { recordActivity } from '../services/usage.js'
 
 export async function createContext({ req, res }: CreateFastifyContextOptions) {
   const result = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) })
@@ -43,6 +44,7 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
   if (!ctx.user || !ctx.session)
     throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' })
   if (ctx.user.banned) throw new TRPCError({ code: 'FORBIDDEN', message: 'Account suspended' })
+  void recordActivity(ctx.user, ctx.session.activeOrganizationId)
   return next({ ctx: { ...ctx, user: ctx.user, session: ctx.session } })
 })
 

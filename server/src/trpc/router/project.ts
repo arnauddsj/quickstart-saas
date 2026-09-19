@@ -4,8 +4,10 @@ import { and, count, desc, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { assertWithinLimit, planLimit } from '../../config/plans.js'
 import { db } from '../../db/client.js'
-import { project, user } from '../../db/schema/index.js'
+import { project, subscription, user } from '../../db/schema/index.js'
 import { notifyWorkspace } from '../../services/notify.js'
+import { reportError } from '../../services/reportError.js'
+import { track } from '../../services/usage.js'
 import { getOrCreateSubscription } from '../../services/stripe.js'
 import { orgAdminProcedure, orgProcedure, router } from '../index.js'
 
@@ -43,16 +45,25 @@ export const projectRouter = router({
   }),
 
   create: orgProcedure.input(z.object({ name })).mutation(async ({ ctx, input }) => {
-    const sub = await getOrCreateSubscription(ctx.organizationId)
-    const [usage] = await db
-      .select({ used: count() })
-      .from(project)
-      .where(eq(project.organizationId, ctx.organizationId))
-    assertWithinLimit(sub.plan, 'projects', usage?.used ?? 0)
-    const [row] = await db
-      .insert(project)
-      .values({ organizationId: ctx.organizationId, createdById: ctx.user.id, name: input.name })
-      .returning()
+    await getOrCreateSubscription(ctx.organizationId)
+    const row = await db.transaction(async (tx) => {
+      const [sub] = await tx
+        .select({ plan: subscription.plan })
+        .from(subscription)
+        .where(eq(subscription.organizationId, ctx.organizationId))
+        .for('update')
+      const [usage] = await tx
+        .select({ used: count() })
+        .from(project)
+        .where(eq(project.organizationId, ctx.organizationId))
+      assertWithinLimit(sub!.plan, 'projects', usage?.used ?? 0)
+      const [created] = await tx
+        .insert(project)
+        .values({ organizationId: ctx.organizationId, createdById: ctx.user.id, name: input.name })
+        .returning()
+      return created!
+    })
+    await track(ctx.user.id, ctx.organizationId, 'project.created')
     await notifyWorkspace(
       ctx.organizationId,
       {
@@ -61,8 +72,17 @@ export const projectRouter = router({
         link: '/projects',
       },
       { exceptUserId: ctx.user.id },
+    ).catch((err: unknown) =>
+      reportError({
+        severity: 'ERROR',
+        type: 'notification.project_created',
+        message: 'Project notification failed',
+        error: err,
+        userId: ctx.user.id,
+        organizationId: ctx.organizationId,
+      }),
     )
-    return serialize(row!, ctx.user)
+    return serialize(row, ctx.user)
   }),
 
   rename: orgProcedure

@@ -13,6 +13,7 @@ import {
 import { logger } from '../utils/logger.js'
 import { reportError } from './reportError.js'
 import { stripe } from './stripe.js'
+import { anonymizeUsage } from './usage.js'
 
 export async function organizationsOwnedSolelyBy(userId: string): Promise<string[]> {
   const owned = await db
@@ -31,43 +32,51 @@ export async function organizationsOwnedSolelyBy(userId: string): Promise<string
   return ids.filter((id) => !shared.has(id))
 }
 
+export async function cancelOrganizationBilling(
+  organizationId: string,
+  userId: string,
+): Promise<void> {
+  const sub = await db.query.subscription.findFirst({
+    where: eq(subscription.organizationId, organizationId),
+  })
+  if (sub?.stripeSubscriptionId) {
+    try {
+      await stripe.subscriptions.cancel(sub.stripeSubscriptionId)
+    } catch (err) {
+      reportError({
+        severity: 'ERROR',
+        type: 'account.stripe_cancel',
+        message: 'Stripe cancel failed during deletion',
+        error: err,
+        userId,
+        organizationId,
+      })
+      throw err
+    }
+  }
+  if (sub?.stripeCustomerId) {
+    try {
+      await stripe.customers.del(sub.stripeCustomerId)
+    } catch (err) {
+      reportError({
+        severity: 'WARNING',
+        type: 'account.stripe_customer_delete',
+        message: 'Stripe customer delete failed during deletion',
+        error: err,
+        userId,
+        organizationId,
+      })
+    }
+  }
+}
+
 export async function cleanupBeforeUserDelete(userId: string): Promise<void> {
   const orgIds = await organizationsOwnedSolelyBy(userId)
   for (const organizationId of orgIds) {
-    const sub = await db.query.subscription.findFirst({
-      where: eq(subscription.organizationId, organizationId),
-    })
-    if (sub?.stripeSubscriptionId) {
-      try {
-        await stripe.subscriptions.cancel(sub.stripeSubscriptionId)
-      } catch (err) {
-        reportError({
-          severity: 'ERROR',
-          type: 'account.stripe_cancel',
-          message: 'Stripe cancel failed during account deletion',
-          error: err,
-          userId,
-          organizationId,
-        })
-        throw err
-      }
-    }
-    if (sub?.stripeCustomerId) {
-      try {
-        await stripe.customers.del(sub.stripeCustomerId)
-      } catch (err) {
-        reportError({
-          severity: 'WARNING',
-          type: 'account.stripe_customer_delete',
-          message: 'Stripe customer delete failed during account deletion',
-          error: err,
-          userId,
-          organizationId,
-        })
-      }
-    }
+    await cancelOrganizationBilling(organizationId, userId)
     await db.delete(organization).where(eq(organization.id, organizationId))
   }
+  await anonymizeUsage(userId)
   logger.info({ userId, deletedOrganizations: orgIds.length }, 'account deletion cleanup')
 }
 

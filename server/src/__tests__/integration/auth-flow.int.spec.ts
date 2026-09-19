@@ -53,6 +53,15 @@ describe('magic-link sign-in through the Fastify bridge', () => {
     expect(b.data).toMatchObject({ email: 'second@test.io', role: 'member' })
   })
 
+  it('makes exactly one admin when the first accounts arrive together', async () => {
+    const emails = Array.from({ length: 25 }, (_, i) => `racer${i}@test.io`)
+    for (const email of emails) expect((await requestMagicLink(app, email)).statusCode).toBe(200)
+    await Promise.all(emails.map((email) => followLink(app, lastMail(email, 'magicLink').url)))
+
+    expect(await rowCount(schema.user)).toBe(25)
+    expect(await rowCount(schema.user, eq(schema.user.role, 'admin'))).toBe(1)
+  })
+
   it('forwards the session cookie so tRPC resolves the user, and rejects without it', async () => {
     const cookie = await signIn(app, 'jane@test.io')
     expect((await trpcQuery<Me>(app, 'user.me', cookie)).data?.email).toBe('jane@test.io')

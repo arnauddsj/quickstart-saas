@@ -18,6 +18,7 @@ It is deliberately separate from:
 | [configuration.md](configuration.md)                     | Every environment variable, which ones have dev defaults that throw in production, and why `PUBLIC_URL` is one variable and not three |
 | [auth.md](auth.md)                                       | How a magic link becomes a session cookie, why the proxy must not rewrite `Host`, and what each tRPC procedure tier guarantees        |
 | [admin.md](admin.md)                                     | Why the first account is the admin, how activity is derived from sessions, and what each admin lever does                             |
+| [analytics.md](analytics.md)                             | How activity and events are recorded, what each admin analytics number means, and how usage is anonymized and expired                 |
 | [organizations.md](organizations.md)                     | Where the active organization lives, how the first one is created, and why every org-scoped query goes through `orgProcedure`         |
 | [branding.md](branding.md)                               | Where the product is named, what users call a workspace, and how `teams: false` hides workspaces without removing them                |
 | [reference-feature.md](reference-feature.md)             | The Projects placeholder: the workspace-scoped, plan-limited pattern it demonstrates and how to rename it on day one                  |

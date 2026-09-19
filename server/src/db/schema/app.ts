@@ -1,5 +1,14 @@
 // docs/database-and-migrations.md
-import { boolean, index, jsonb, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import {
+  boolean,
+  date,
+  index,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core'
 import { organization, user } from './auth.js'
 
 export const PLAN_NAMES = ['FREE', 'PRO'] as const
@@ -71,4 +80,35 @@ export const notification = pgTable(
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('notification_user_created_idx').on(t.userId, t.createdAt)],
+)
+
+export const activityDay = pgTable(
+  'activity_day',
+  {
+    subjectId: text().notNull(),
+    day: date({ mode: 'string' }).notNull(),
+    signedUpOn: date({ mode: 'string' }).notNull(),
+    organizationId: text().references(() => organization.id, { onDelete: 'set null' }),
+  },
+  (t) => [
+    uniqueIndex('activity_day_subject_day_idx').on(t.subjectId, t.day),
+    index('activity_day_day_idx').on(t.day),
+  ],
+)
+
+export const usageEvent = pgTable(
+  'usage_event',
+  {
+    id: text()
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    subjectId: text().notNull(),
+    organizationId: text().references(() => organization.id, { onDelete: 'set null' }),
+    type: text().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('usage_event_type_created_idx').on(t.type, t.createdAt),
+    index('usage_event_subject_idx').on(t.subjectId),
+  ],
 )

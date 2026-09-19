@@ -7,8 +7,8 @@ import { env, IS_PROD } from '../config/env.js'
 import { db } from '../db/client.js'
 import * as schema from '../db/schema/index.js'
 import { createEmailProvider } from '../email/index.js'
-import { cleanupBeforeUserDelete } from '../services/account.js'
-import { roleForNewUser } from '../services/admin.js'
+import { cancelOrganizationBilling, cleanupBeforeUserDelete } from '../services/account.js'
+import { claimFirstAdmin } from '../services/admin.js'
 import { notify } from '../services/notify.js'
 import { reportError } from '../services/reportError.js'
 import { workspacePolicy } from '../services/workspacePolicy.js'
@@ -40,8 +40,8 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        before: async (user) => ({ data: { ...user, role: await roleForNewUser() } }),
         after: async (user) => {
+          await claimFirstAdmin(user.id)
           await notify(user.id, {
             type: 'account.welcome',
             title: `Welcome to ${brand.name}`,
@@ -122,6 +122,10 @@ export const auth = betterAuth({
     organization({
       ...workspacePolicy(brand.teams),
       creatorRole: 'owner',
+      organizationHooks: {
+        beforeDeleteOrganization: ({ organization: org, user }) =>
+          cancelOrganizationBilling(org.id, user.id),
+      },
       sendInvitationEmail: async ({ email, id, organization: org, inviter }) => {
         await sendEmail(
           'invitation',

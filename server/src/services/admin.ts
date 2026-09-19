@@ -1,14 +1,31 @@
 // docs/admin.md
-import { and, count, desc, eq, gte, max, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, gte, max, sql } from 'drizzle-orm'
 import { db } from '../db/client.js'
 import { member, organization, session, subscription, user } from '../db/schema/index.js'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const daysAgo = (n: number) => new Date(Date.now() - n * DAY_MS)
 
-export async function roleForNewUser(): Promise<'admin' | 'member'> {
-  const [row] = await db.select({ value: count() }).from(user)
-  return (row?.value ?? 0) === 0 ? 'admin' : 'member'
+export const FIRST_ADMIN_LOCK_ID = 727_146_002
+
+export async function claimFirstAdmin(userId: string): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(${FIRST_ADMIN_LOCK_ID})`)
+    const [admin] = await tx
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.role, 'admin'))
+      .limit(1)
+    if (admin) return false
+    const [first] = await tx
+      .select({ id: user.id })
+      .from(user)
+      .orderBy(asc(user.createdAt), asc(user.id))
+      .limit(1)
+    if (first?.id !== userId) return false
+    await tx.update(user).set({ role: 'admin' }).where(eq(user.id, userId))
+    return true
+  })
 }
 
 export async function adminStats() {

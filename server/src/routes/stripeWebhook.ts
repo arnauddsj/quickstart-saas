@@ -38,7 +38,7 @@ export async function stripeWebhookRoutes(app: FastifyInstance) {
         case 'customer.subscription.created':
         case 'customer.subscription.updated':
         case 'customer.subscription.deleted':
-          await applyStripeSubscription(event.data.object)
+          await applyStripeSubscription(await stripe.subscriptions.retrieve(event.data.object.id))
           break
       }
     } catch (err) {

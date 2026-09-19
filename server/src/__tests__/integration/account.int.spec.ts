@@ -1,8 +1,9 @@
 import { eq } from 'drizzle-orm'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type * as StripeService from '../../services/stripe.js'
 import {
   addMember,
+  authPost,
   callerFor,
   db,
   resetDatabase,
@@ -12,12 +13,16 @@ import {
   seedOrg,
   seedSession,
   seedUser,
+  signIn,
 } from './helpers.js'
+import type { App } from './helpers.js'
 
 const fakeStripe = vi.hoisted(() => ({
   subscriptions: { cancel: vi.fn(async () => ({})) },
   customers: { del: vi.fn(async () => ({})) },
 }))
+
+vi.mock('../../email/index.js', async () => (await import('./mailbox.js')).emailModule)
 
 vi.mock('../../services/stripe.js', async (importOriginal) => ({
   ...(await importOriginal<typeof StripeService>()),
@@ -122,6 +127,58 @@ describe('deletion cleanup', () => {
 
     await expect(cleanupBeforeUserDelete(alice.id)).rejects.toThrow('stripe down')
     expect(await rowCount(schema.organization, eq(schema.organization.id, soleOwned.id))).toBe(1)
+    expect(await rowCount(schema.subscription)).toBe(1)
+  })
+})
+
+describe('workspace deletion through better-auth', () => {
+  let app: App
+
+  beforeAll(async () => {
+    const { buildApp } = await import('../../app.js')
+    app = await buildApp()
+    await app.ready()
+  })
+
+  afterAll(async () => {
+    await app.close()
+  })
+
+  async function paidWorkspace() {
+    const cookie = await signIn(app, 'owner@test.io')
+    const created = await authPost(app, '/organization/create', cookie, {
+      name: 'Paid',
+      slug: `paid-${Date.now()}`,
+    })
+    const org = created.json() as { id: string }
+    await db.insert(schema.subscription).values({
+      organizationId: org.id,
+      plan: 'PRO',
+      stripeCustomerId: 'cus_paid',
+      stripeSubscriptionId: 'sub_paid',
+    })
+    return { cookie, org }
+  }
+
+  it('cancels the Stripe subscription before deleting the workspace', async () => {
+    const { cookie, org } = await paidWorkspace()
+
+    const res = await authPost(app, '/organization/delete', cookie, { organizationId: org.id })
+
+    expect(res.statusCode).toBe(200)
+    expect(fakeStripe.subscriptions.cancel).toHaveBeenCalledExactlyOnceWith('sub_paid')
+    expect(fakeStripe.customers.del).toHaveBeenCalledWith('cus_paid')
+    expect(await rowCount(schema.organization, eq(schema.organization.id, org.id))).toBe(0)
+  })
+
+  it('keeps the workspace and its subscription when Stripe refuses the cancellation', async () => {
+    const { cookie, org } = await paidWorkspace()
+    fakeStripe.subscriptions.cancel.mockRejectedValueOnce(new Error('stripe down'))
+
+    const res = await authPost(app, '/organization/delete', cookie, { organizationId: org.id })
+
+    expect(res.statusCode).toBeGreaterThanOrEqual(400)
+    expect(await rowCount(schema.organization, eq(schema.organization.id, org.id))).toBe(1)
     expect(await rowCount(schema.subscription)).toBe(1)
   })
 })

@@ -48,6 +48,26 @@ the policy in `nginx.conf.template`, or it is blocked silently in production onl
 `/index.html` block repeats every header because nginx drops inherited `add_header`s);
 without it the browser SDK's requests are blocked.
 
+## The production overlay publishes only the client
+
+`docker-compose.prod.yaml` reuses the development file's `postgres` and adds the images.
+It removes Postgres's host port (`ports: !reset []`), so the database is reachable only on
+the Compose network, and it requires `POSTGRES_PASSWORD`: the development default,
+`quickstart`, is public. Mailpit starts only under the `local-mail` profile, and the server
+gets no `SMTP_HOST` default, so production mail goes through Loops or a real relay.
+Docker's published ports bypass host firewalls such as ufw, which is why a firewall is not
+the fix.
+
+`POSTGRES_PASSWORD` sets the password only when the volume is first created. An
+installation that ran on the old default keeps it: set `POSTGRES_PASSWORD=quickstart`
+to boot, then change it with `ALTER USER` and update the variable.
+
+**The Compose project, and so the volume, is named after the directory.** The files used
+to fix `name: quickstart` and the volume name `quickstart_postgres_data`, so two products
+on one host shared a database. An installation created before that change keeps its data
+by setting `COMPOSE_PROJECT_NAME=quickstart`; without it Compose creates a new, empty
+volume.
+
 ## Boot order is migrate, jobs, listen
 
 `index.ts` runs `runMigrations()`, then `startBoss()`, then `app.listen()`, then starts
@@ -77,17 +97,20 @@ always finishes under the 10-second stop grace period Coolify does not let you r
 ```bash
 PUBLIC_URL=http://localhost:8080 CLIENT_PORT=8080 AUTH_SECRET=$(openssl rand -hex 32) \
 STRIPE_SECRET_KEY=sk_test_x STRIPE_WEBHOOK_SECRET=whsec_x COOKIE_SECURE=false \
-docker compose -f docker-compose.yaml -f docker-compose.prod.yaml up -d --build
+POSTGRES_PASSWORD=local SMTP_HOST=mailpit \
+docker compose -f docker-compose.yaml -f docker-compose.prod.yaml --profile local-mail up -d --build
 curl -s localhost:8080/health/ready
 ```
 
 `CLIENT_PORT` defaults to 80; the recipe uses 8080 because 80 is usually taken on a
-laptop.
+laptop. `--profile local-mail` with `SMTP_HOST=mailpit` brings Mailpit back so the magic
+link can be read locally.
 
 `COOKIE_SECURE=false` is accepted in production only because `PUBLIC_URL` is plain
 `http://localhost`; `parseEnv` refuses it for any other origin. Behind Coolify's proxy
-with HTTPS it must be `true`, and the server trusts `X-Forwarded-Proto` because Fastify
-runs with `trustProxy: true`.
+with HTTPS it must be `true`. The server trusts `X-Forwarded-Proto` and `X-Forwarded-For`
+only from peers matching `TRUST_PROXY`; the default covers the nginx container on the
+Compose network.
 
 ## Error tracking lives in GlitchTip
 

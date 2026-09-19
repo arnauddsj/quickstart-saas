@@ -53,6 +53,7 @@ export default defineConfig({
               name: 'vendor-auth',
               test: /node_modules\/(better-auth|better-call|nanostores|@better-fetch)\//,
             },
+            { name: 'vendor-charts', test: /node_modules\/(chart\.js|vue-chartjs|@kurkle)\// },
             { name: 'vendor-misc', test: /node_modules\// },
           ],
         },

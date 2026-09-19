@@ -25,14 +25,17 @@ Specs: `server/src/__tests__/integration/projects.int.spec.ts`, `e2e/projects.sp
   by it.
 - **Roles.** Members list, create and rename; `orgAdminProcedure` restricts delete to
   owners and admins.
-- **Plan limits.** `create` counts existing rows and calls `assertWithinLimit` before the
-  insert. `list` returns the limit so the page can show "2 of 3" and disable the button.
-  The count and the insert are not atomic; two simultaneous creates can exceed the limit
-  by one, which is accepted until a product needs a hard quota.
+- **Plan limits.** `create` opens a transaction, locks the workspace's `subscription` row
+  (`SELECT … FOR UPDATE`), counts, calls `assertWithinLimit` and inserts. The lock makes
+  concurrent creates in one workspace take turns; without it eight simultaneous requests
+  each counted two rows and all passed a limit of three. A transaction alone does not
+  help at `READ COMMITTED`. Copy the lock with the check for any limited resource.
+  `list` returns the limit so the page can show "2 of 3" and disable the button.
 - **The page.** A loading skeleton, an empty state with a call to action, a table, one
   dialog for create and rename, a confirmation for delete, toasts, and cache
   invalidation on success.
-- **A notification.** `create` tells the other members with `notifyWorkspace`; see
+- **A notification.** `create` tells the other members with `notifyWorkspace` after the
+  transaction commits, and reports a failure instead of throwing it; see
   [notifications.md](notifications.md).
 - **Tests.** The integration spec proves isolation between workspaces, the role split and
   the limit. The e2e spec proves the page end to end.
@@ -49,7 +52,9 @@ instead.
    - `Projects.vue`, the route, the nav label and icon
    - the `Project` type
    - the `projects` limit in `plans.ts`
-2. Rename or drop the `project.created` notification in `create`.
+2. Rename or drop the `project.created` notification and `track` event in `create`, set
+   `ACTIVATION_EVENT` in `services/analytics.ts` to the product's key action, and rename
+   the `projects` entry in `usageCounters`.
 3. Add the entity's real columns to the table and the zod inputs.
 4. Run `pnpm db:generate`. drizzle-kit asks whether the new table is a rename of
    `project`. Answer yes to keep the data, or "create" to start empty. Read the SQL it

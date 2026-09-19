@@ -23,6 +23,7 @@ export const legal = {
     },
   ],
   errorTracking: { tool: 'GlitchTip, self-hosted', retentionDays: 90 },
+  usageStatistics: { retentionMonths: 25 },
   consentCookieDays: 180,
   policyVersion: '2026-09',
 } as const

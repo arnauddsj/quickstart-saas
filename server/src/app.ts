@@ -25,7 +25,7 @@ export async function buildApp() {
   const app = fastify({
     loggerInstance: logger,
     routerOptions: { maxParamLength: 5000 },
-    trustProxy: true,
+    trustProxy: env.TRUST_PROXY,
     genReqId: (req) => headerId(req.headers['x-request-id']) ?? randomUUID(),
   })
 
@@ -45,6 +45,7 @@ export async function buildApp() {
   await app.register(rateLimit, {
     max: 300,
     timeWindow: '1 minute',
+    allowList: (request) => request.url.split('?')[0] === '/api/auth/get-session',
     errorResponseBuilder: (_request, context) => {
       const error = new Error(`Rate limit exceeded, retry in ${context.after}`) as Error & {
         statusCode: number

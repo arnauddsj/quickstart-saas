@@ -4,6 +4,7 @@ import { RouterLink, RouterView, useRouter } from 'vue-router'
 import {
   Bug,
   Building2,
+  ChartLine,
   CreditCard,
   FolderKanban,
   Gauge,
@@ -39,6 +40,7 @@ const nav = [
 ]
 const adminNav = [
   { to: { name: 'admin-dashboard' }, label: 'Overview', icon: Gauge },
+  { to: { name: 'admin-analytics' }, label: 'Analytics', icon: ChartLine },
   { to: { name: 'admin-users' }, label: 'Users', icon: Users },
   { to: { name: 'admin-organizations' }, label: workspace.Many, icon: Shield },
 ]

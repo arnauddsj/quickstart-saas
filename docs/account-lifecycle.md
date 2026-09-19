@@ -3,12 +3,14 @@
 Everything a person can do to their own account, in the order it fails when done wrong:
 rename, change email, download their data, delete the account and what goes with it.
 
-Code: `server/src/auth/index.ts` (`user.changeEmail`, `user.deleteUser`),
-`server/src/services/account.ts` (`organizationsOwnedSolelyBy`, `cleanupBeforeUserDelete`,
+Code: `server/src/auth/index.ts` (`user.changeEmail`, `user.deleteUser`,
+`organizationHooks.beforeDeleteOrganization`), `server/src/services/account.ts`
+(`organizationsOwnedSolelyBy`, `cancelOrganizationBilling`, `cleanupBeforeUserDelete`,
 `exportUserData`), `server/src/trpc/router/user.ts` (`exportData`, `deletionPreview`,
 `getConsent`, `setConsent`), `server/src/email/templates.ts` (`emailChange`,
 `emailVerification`, `accountDeletion`), `client/src/pages/settings/Account.vue`. Spec:
-`server/src/__tests__/account.spec.ts`.
+`server/src/__tests__/account.spec.ts`,
+`server/src/__tests__/integration/account.int.spec.ts`.
 
 ## Profile and email are better-auth endpoints, not tRPC
 
@@ -41,6 +43,12 @@ Organizations with another owner are kept; the person simply leaves them.
 **A failed Stripe cancellation aborts the deletion.** Deleting first and cancelling later is
 how a paid subscription keeps billing an organization that no longer exists. The user sees
 an error and can retry; the spec covers this branch.
+
+**Deleting a workspace directly goes through the same billing cleanup.** The organization
+plugin exposes `POST /api/auth/organization/delete` to owners whether or not the UI offers
+a button. Its `beforeDeleteOrganization` hook calls `cancelOrganizationBilling`, the same
+function account deletion uses, so a throw from Stripe aborts that path too. A new deletion
+path must call it as well.
 
 The Account page calls `user.deletionPreview` before asking for confirmation so the person
 sees which organizations disappear with them.

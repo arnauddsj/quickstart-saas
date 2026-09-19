@@ -41,6 +41,12 @@ export const router = createRouter({
           meta: { requiresAdmin: true },
         },
         {
+          path: 'admin/analytics',
+          name: 'admin-analytics',
+          component: () => import('@/pages/admin/Analytics.vue'),
+          meta: { requiresAdmin: true },
+        },
+        {
           path: 'admin/users',
           name: 'admin-users',
           component: () => import('@/pages/admin/Users.vue'),

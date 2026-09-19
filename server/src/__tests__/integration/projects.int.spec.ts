@@ -1,9 +1,30 @@
 // docs/reference-feature.md
 import { TRPCError } from '@trpc/server'
 import { eq } from 'drizzle-orm'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { PLANS } from '../../config/plans.js'
-import { addMember, callerFor, db, resetDatabase, schema, seedOrg, seedUser } from './helpers.js'
+import type * as NotifyModule from '../../services/notify.js'
+import {
+  addMember,
+  callerFor,
+  db,
+  resetDatabase,
+  rowCount,
+  schema,
+  seedOrg,
+  seedUser,
+} from './helpers.js'
+
+const notifyDown = vi.hoisted(() => ({ on: false }))
+
+vi.mock('../../services/notify.js', async (importOriginal) => {
+  const real = await importOriginal<typeof NotifyModule>()
+  return {
+    ...real,
+    notifyWorkspace: (...args: Parameters<typeof real.notifyWorkspace>) =>
+      notifyDown.on ? Promise.reject(new Error('notify down')) : real.notifyWorkspace(...args),
+  }
+})
 
 async function code(p: Promise<unknown>) {
   try {
@@ -31,7 +52,10 @@ async function world() {
   }
 }
 
-beforeEach(resetDatabase)
+beforeEach(async () => {
+  notifyDown.on = false
+  await resetDatabase()
+})
 
 describe('projects stay inside their workspace', () => {
   it('lists only the active workspace projects', async () => {
@@ -85,5 +109,29 @@ describe('the plan limits projects', () => {
       .values({ organizationId: orgA.id, plan: 'PRO' })
       .onConflictDoUpdate({ target: schema.subscription.organizationId, set: { plan: 'PRO' } })
     expect((await alice.project.create({ name: 'On PRO' })).name).toBe('On PRO')
+  })
+
+  it('holds the limit when creates arrive concurrently', async () => {
+    const { alice, orgA } = await world()
+    const max = PLANS.FREE.limits.projects
+    await alice.project.create({ name: 'First' })
+    await alice.project.create({ name: 'Second' })
+
+    const results = await Promise.all(
+      Array.from({ length: 8 }, (_, i) => code(alice.project.create({ name: `Race ${i}` }))),
+    )
+
+    expect(await rowCount(schema.project, eq(schema.project.organizationId, orgA.id))).toBe(max)
+    expect(results.filter((r) => r === 'OK')).toHaveLength(max - 2)
+  })
+})
+
+describe('a failed notification', () => {
+  it('does not turn a committed create into an error the user would retry', async () => {
+    const { alice, orgA } = await world()
+    notifyDown.on = true
+
+    expect((await alice.project.create({ name: 'Kept' })).name).toBe('Kept')
+    expect(await rowCount(schema.project, eq(schema.project.organizationId, orgA.id))).toBe(1)
   })
 })

@@ -31,6 +31,10 @@ await notifyWorkspace(ctx.organizationId, { type, title, link }, { exceptUserId:
   `notifyWorkspace` rows never leak a link into the wrong workspace's data.
 - **Excluding the actor.** `notifyWorkspace` writes one row per member. Pass
   `exceptUserId` so the person who acted is not told about their own action.
+- **Best effort after the write.** Notify after the transaction that did the work, and
+  `.catch` a failure into `reportError` rather than letting it reject the procedure. A
+  thrown notification turned a committed create into an error, and the user's retry
+  created a second row.
 - **Email too.** When an event deserves both channels, call `emailProvider.send` as
   well. The two are deliberately separate, because most in-app events are too minor for
   email.

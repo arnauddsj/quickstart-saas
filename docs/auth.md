@@ -52,16 +52,20 @@ scales past one process. The old home-grown limiter counted nothing and failed o
 it inside the 30-a-minute window, an ordinary user clicking through a dozen pages hit
 429, the guard read that as "no session", and they were bounced to the sign-in page as if
 logged out; an office behind one NAT address would have hit it together. The exemption
-is `customRules['/get-session']: false` in `auth/index.ts`; the check is one indexed
-lookup and signs nobody in, so there is nothing to brute-force.
+is `customRules['/get-session']: false` in `auth/index.ts` and the `allowList` of
+`@fastify/rate-limit` in `app.ts`; both layers count requests, and for a while only
+better-auth's was exempted, so the 301st check in a minute from one address still got 429.
+The check is one indexed lookup and signs nobody in, so there is nothing to brute-force.
 
 **better-auth's limits run in production only** (`enabled: IS_PROD`). In development
 every request comes from `127.0.0.1`, so five magic links locked the developer out for an
 hour. `rateLimit.int.spec.ts` runs with production settings to keep both rules tested.
 
-Both key on the client address, and both read `X-Forwarded-For`. That address is only as
-trustworthy as the proxy that set it: see the `real_ip` and `TRUST_PROXY` rules in
-[deployment.md](deployment.md#nginx-serves-the-spa-and-proxies-the-api).
+Both key on the same client address: Fastify resolves `request.ip` from
+`X-Forwarded-For` only when the peer matches `TRUST_PROXY`, and the bridge in
+`auth/fastify.ts` overwrites the header with that address before calling better-auth, which
+would otherwise believe whatever the client sent. See the `real_ip` and `TRUST_PROXY` rules
+in [deployment.md](deployment.md#nginx-serves-the-spa-and-proxies-the-api).
 
 ## A failed session check is not "signed out"
 

@@ -42,6 +42,7 @@ describe('parseEnv', () => {
       NODE_ENV: 'production',
       AUTH_SECRET: 'x'.repeat(32),
       COOKIE_SECURE: 'false',
+      SMTP_HOST: 'mailpit',
       STRIPE_SECRET_KEY: 'sk',
       STRIPE_WEBHOOK_SECRET: 'wh',
     }
@@ -63,6 +64,28 @@ describe('parseEnv', () => {
         STRIPE_WEBHOOK_SECRET: 'wh',
       }),
     ).toThrow(/COOKIE_SECURE must be true in production/)
+  })
+
+  it('refuses SMTP in production without an explicit host, rather than sending to localhost', () => {
+    const prod = {
+      ...base,
+      NODE_ENV: 'production',
+      PUBLIC_URL: 'https://app.example.com',
+      AUTH_SECRET: 'x'.repeat(32),
+      COOKIE_SECURE: 'true',
+      STRIPE_SECRET_KEY: 'sk',
+      STRIPE_WEBHOOK_SECRET: 'wh',
+    }
+    expect(() => parseEnv({ ...prod, SMTP_HOST: '' })).toThrow(/needs SMTP_HOST in production/)
+    expect(parseEnv({ ...prod, SMTP_HOST: 'smtp.example.com' }).SMTP_HOST).toBe('smtp.example.com')
+    expect(
+      parseEnv({
+        ...prod,
+        EMAIL_PROVIDER: 'loops',
+        LOOPS_API_KEY: 'k',
+        LOOPS_TEMPLATE_IDS: 'magicLink=t',
+      }).EMAIL_PROVIDER,
+    ).toBe('loops')
   })
 
   it('requires Loops credentials when EMAIL_PROVIDER=loops', () => {
