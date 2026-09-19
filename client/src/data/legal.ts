@@ -22,6 +22,7 @@ export const legal = {
       consent: true,
     },
   ],
+  errorTracking: { tool: 'GlitchTip, self-hosted', retentionDays: 90 },
   consentCookieDays: 180,
   policyVersion: '2026-09',
 } as const

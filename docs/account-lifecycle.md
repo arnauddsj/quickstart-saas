@@ -52,8 +52,13 @@ sees which organizations disappear with them.
 about a person, so nothing else is exported; when a project adds a table with personal
 data it adds a key here in the same change. The client turns the payload into a download.
 
-GlitchTip events carry only a user id, never an email; they are operational logs held by
-the tracker's retention, not personal data this app stores, and are not part of the export.
+Notifications are left out on purpose. They are messages the app generated about events
+the user can already see, not data the user provided. They are deleted with the account
+by cascade. Do not add them to the export.
+
+GlitchTip events carry only a user id, never an email. They are operational logs held by
+the tracker's retention and are not part of the export. The privacy page's "Error
+monitoring" section discloses them, with the retention from `legal.errorTracking`.
 
 ## What is not here
 

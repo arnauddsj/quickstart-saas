@@ -33,6 +33,26 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
     </Card>
 
     <Card>
+      <CardHeader><CardTitle>Error monitoring</CardTitle></CardHeader>
+      <CardContent class="space-y-2 text-sm">
+        <p>
+          When something breaks, we record what is needed to fix it: the error and where it happened
+          in the code, the page, your browser, the app version, a short trail of the actions that
+          led to it, and the internal identifiers of your account and
+          {{ workspace.one }}. We never record your email, what you type into forms, cookies, or the
+          secret part of sign-in and invitation links.
+        </p>
+        <p>
+          This runs on {{ legal.errorTracking.tool }} on our own servers ({{ legal.host }}); the
+          data is not shared with any third party and is deleted after
+          {{ legal.errorTracking.retentionDays }} days. It is kept to keep the service working
+          (legitimate interest), not for analytics, and is therefore always on. Once your account is
+          deleted, the identifiers in these records no longer point to anyone.
+        </p>
+      </CardContent>
+    </Card>
+
+    <Card>
       <CardHeader><CardTitle>Analytics tools</CardTitle></CardHeader>
       <CardContent class="space-y-3 text-sm">
         <table class="w-full text-left">

@@ -36,6 +36,7 @@ maintained, this file is not a history.
       set the product name in `README.md` (`brand.ts` covers the app itself).
 - [ ] **Fill `client/src/data/legal.ts`** (entity, address, registration, host, contact) and
       rewrite `pages/legal/Terms.vue`; the privacy page is generated from it. Set
+      `errorTracking.retentionDays` to the GlitchTip project's event retention. Set
       `VITE_GA4_ID` / `VITE_CLARITY_ID` only once the policy names them.
 
 ## 2. Backlog

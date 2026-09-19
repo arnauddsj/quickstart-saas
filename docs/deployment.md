@@ -97,15 +97,17 @@ apps, so that it can report an app host going away. Per app:
 1. **Project.** Create one GlitchTip project for client and server together. Set
    `SENTRY_DSN` on the server service and `VITE_SENTRY_DSN` as a client build variable,
    both to its DSN. Set `SENTRY_ENVIRONMENT` per deployment.
-2. **Alerts.** Add an alert rule on new issues with two recipients: a Discord webhook
+2. **Retention.** Set the event retention to match `errorTracking.retentionDays` in
+   `client/src/data/legal.ts` (default 90), because the privacy page promises it.
+3. **Alerts.** Add an alert rule on new issues with two recipients: a Discord webhook
    and email.
-3. **Uptime.** Add an uptime monitor on `https://<public host>/health/ready`, alerting to
+4. **Uptime.** Add an uptime monitor on `https://<public host>/health/ready`, alerting to
    the same recipients.
-4. **Browser access.**
+5. **Browser access.**
    - Set `GLITCHTIP_ORIGIN` (e.g. `https://glitchtip.example.com`) on the client service
      for the CSP.
    - Set `VITE_GLITCHTIP_URL` to the project's issue list for the admin link.
-5. **Source maps.**
+6. **Source maps.**
    - Create an auth token with `project:releases`.
    - Set `SENTRY_URL`, `SENTRY_ORG` and `SENTRY_PROJECT` as client build variables.
    - Provide `SENTRY_AUTH_TOKEN` as a Docker build secret; Compose reads it from the
