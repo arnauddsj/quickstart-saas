@@ -9,6 +9,7 @@ import * as schema from '../db/schema/index.js'
 import { createEmailProvider } from '../email/index.js'
 import { cleanupBeforeUserDelete } from '../services/account.js'
 import { roleForNewUser } from '../services/admin.js'
+import { notify } from '../services/notify.js'
 import { reportError } from '../services/reportError.js'
 import { workspacePolicy } from '../services/workspacePolicy.js'
 
@@ -40,6 +41,21 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (user) => ({ data: { ...user, role: await roleForNewUser() } }),
+        after: async (user) => {
+          await notify(user.id, {
+            type: 'account.welcome',
+            title: `Welcome to ${brand.name}`,
+            body: 'Your account is ready.',
+          }).catch((err: unknown) =>
+            reportError({
+              severity: 'ERROR',
+              type: 'notification.welcome',
+              message: 'Welcome notification failed',
+              error: err,
+              userId: user.id,
+            }),
+          )
+        },
       },
     },
   },

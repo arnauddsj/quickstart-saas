@@ -16,6 +16,9 @@ maintained, this file is not a history.
       product's first real entity and must not ship as "Projects". Follow
       [`docs/reference-feature.md`](../docs/reference-feature.md) § Renaming it, before the
       first deploy so migration `0003` can be regenerated.
+- [ ] **Replace the example notifications.** `account.welcome` and `project.created` show
+      the pattern; keep, reword or delete them, and add the product's own events. See
+      [`docs/notifications.md`](../docs/notifications.md).
 - [ ] **Set the brand.** Edit `server/src/config/brand.ts`: product name, support email,
       accent color, the workspace label, and `teams: false` for a single-user product. See
       [`docs/branding.md`](../docs/branding.md).

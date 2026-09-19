@@ -2,6 +2,7 @@
 import { publicProcedure, router } from '../index.js'
 import { adminRouter } from './admin.js'
 import { billingRouter } from './billing.js'
+import { notificationRouter } from './notification.js'
 import { orgRouter } from './org.js'
 import { projectRouter } from './project.js'
 import { userRouter } from './user.js'
@@ -15,6 +16,7 @@ export const appRouter = router({
   org: orgRouter,
   billing: billingRouter,
   project: projectRouter,
+  notification: notificationRouter,
   admin: adminRouter,
 })
 

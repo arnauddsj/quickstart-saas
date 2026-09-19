@@ -51,3 +51,23 @@ export const project = pgTable(
   },
   (t) => [index('project_organization_id_idx').on(t.organizationId)],
 )
+
+export const notification = pgTable(
+  'notification',
+  {
+    id: text()
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    organizationId: text().references(() => organization.id, { onDelete: 'cascade' }),
+    type: text().notNull(),
+    title: text().notNull(),
+    body: text(),
+    link: text(),
+    readAt: timestamp({ withTimezone: true }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('notification_user_created_idx').on(t.userId, t.createdAt)],
+)

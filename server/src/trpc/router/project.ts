@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { assertWithinLimit, planLimit } from '../../config/plans.js'
 import { db } from '../../db/client.js'
 import { project } from '../../db/schema/index.js'
+import { notifyWorkspace } from '../../services/notify.js'
 import { getOrCreateSubscription } from '../../services/stripe.js'
 import { orgAdminProcedure, orgProcedure, router } from '../index.js'
 
@@ -44,6 +45,15 @@ export const projectRouter = router({
       .insert(project)
       .values({ organizationId: ctx.organizationId, name: input.name })
       .returning()
+    await notifyWorkspace(
+      ctx.organizationId,
+      {
+        type: 'project.created',
+        title: `${ctx.user.name || ctx.user.email} created ${input.name}`,
+        link: '/projects',
+      },
+      { exceptUserId: ctx.user.id },
+    )
     return serialize(row!)
   }),
 

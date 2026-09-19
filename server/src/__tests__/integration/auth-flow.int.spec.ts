@@ -59,6 +59,17 @@ describe('magic-link sign-in through the Fastify bridge', () => {
     expect((await trpcQuery(app, 'user.me')).code).toBe('UNAUTHORIZED')
   })
 
+  it('greets a new account with one unread notification', async () => {
+    const cookie = await signIn(app, 'welcome@test.io')
+    const list = await trpcQuery<{ unread: number; items: { type: string }[] }>(
+      app,
+      'notification.list',
+      cookie,
+    )
+    expect(list.data?.unread).toBe(1)
+    expect(list.data?.items.map((n) => n.type)).toEqual(['account.welcome'])
+  })
+
   it('accepts a verify link only once', async () => {
     await requestMagicLink(app, 'once@test.io')
     const link = lastMail('once@test.io', 'magicLink').url

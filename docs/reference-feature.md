@@ -28,6 +28,8 @@ Specs: `server/src/__tests__/integration/projects.int.spec.ts`, `e2e/projects.sp
 - **The page.** A loading skeleton, an empty state with a call to action, a table, one
   dialog for create and rename, a confirmation for delete, toasts, and cache
   invalidation on success.
+- **A notification.** `create` tells the other members with `notifyWorkspace`; see
+  [notifications.md](notifications.md).
 - **Tests.** The integration spec proves isolation between workspaces, the role split and
   the limit. The e2e spec proves the page end to end.
 
@@ -43,9 +45,10 @@ Do this before the first deploy, while `0003` has never run anywhere that matter
    - `Projects.vue`, the route, the nav label and icon
    - the `Project` type
    - the `projects` limit in `plans.ts`
-3. Add the entity's real columns to the table and the zod inputs.
-4. `pnpm db:generate` produces a fresh `0003` for the new table. Read it.
-5. Update both specs, then run `pnpm typecheck`, which lists every call site the rename
+3. Rename or drop the `project.created` notification in `create`.
+4. Add the entity's real columns to the table and the zod inputs.
+5. `pnpm db:generate` produces a fresh `0003` for the new table. Read it.
+6. Update both specs, then run `pnpm typecheck`, which lists every call site the rename
    missed.
 
 If the product needs no such entity, delete the same files, remove the router key, the

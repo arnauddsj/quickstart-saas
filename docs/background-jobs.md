@@ -4,7 +4,8 @@ One pg-boss instance, started after migrations, with queues created before anyth
 works on them.
 
 Code: `server/src/jobs/boss.ts` (`boss`, `startBoss`, `stopBoss`, `bossStarted`),
-`jobs/heartbeat.ts` (`registerHeartbeat`, `HEARTBEAT_QUEUE`), `jobs/withReporting.ts`,
+`jobs/heartbeat.ts` (`registerHeartbeat`, `HEARTBEAT_QUEUE`), `jobs/notificationCleanup.ts`,
+`jobs/withReporting.ts`,
 `routes/health.ts`, `index.ts`.
 
 ## There is exactly one instance
@@ -34,6 +35,9 @@ Skipping the first call throws `Queue … does not exist` on the second, at boot
    `job.<queue>` before pg-boss retries it.
 4. Enqueue from anywhere with `boss.send(QUEUE, data)`; the handler receives an array of
    jobs in v12, so read `jobs[0].data` or loop.
+
+`notificationCleanup.ts` is the other periodic job: it deletes notifications past their
+retention every day at 04:00 UTC ([notifications.md](notifications.md)).
 
 `heartbeat.ts` is the worked example: one queue, one wrapped worker, one `*/5 * * * *`
 schedule. It exists so the watchdog can tell a stalled worker from an idle one; see

@@ -12,3 +12,4 @@ export type AdminOrganization = RouterOutputs['admin']['listOrganizations'][numb
 export type DataExport = RouterOutputs['user']['exportData']
 export type AdminStats = RouterOutputs['admin']['stats']
 export type Project = RouterOutputs['project']['list']['projects'][number]
+export type AppNotification = RouterOutputs['notification']['list']['items'][number]

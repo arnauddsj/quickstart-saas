@@ -24,6 +24,7 @@ It is deliberately separate from:
 | [database-and-migrations.md](database-and-migrations.md) | Which schema file is generated and which is hand-written, and the generate → review → commit → boot-applies loop                      |
 | [background-jobs.md](background-jobs.md)                 | One pg-boss instance, why `createQueue` must precede `work`, and how to add a job                                                     |
 | [email.md](email.md)                                     | Which provider sends, chosen by `EMAIL_PROVIDER` alone, and how tests read mail back from Mailpit                                     |
+| [notifications.md](notifications.md)                     | How a server call becomes a row in the bell, how rows are scoped to a user and workspace, and how long they live                      |
 | [billing.md](billing.md)                                 | Plans as the single source of limits, `planGuard` before premium work, and how a Stripe price id becomes a plan on an organization    |
 | [error-reporting.md](error-reporting.md)                 | What reaches GlitchTip and alerts, how user, org, request and action ids are attached, and how the watchdog reports outages once      |
 

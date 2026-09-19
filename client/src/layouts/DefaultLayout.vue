@@ -20,6 +20,7 @@ import { brand, workspace } from '@/lib/brand'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import OrgSwitcher from '@/components/OrgSwitcher.vue'
+import NotificationBell from '@/components/NotificationBell.vue'
 import LegalFooter from '@/components/LegalFooter.vue'
 
 const router = useRouter()
@@ -54,7 +55,10 @@ async function signOut() {
 <template>
   <div class="flex min-h-screen">
     <aside class="flex w-64 shrink-0 flex-col border-r bg-sidebar p-4">
-      <div class="mb-4 text-lg font-semibold">{{ brand.name }}</div>
+      <div class="mb-4 flex items-center justify-between">
+        <span class="text-lg font-semibold">{{ brand.name }}</span>
+        <NotificationBell />
+      </div>
       <OrgSwitcher v-if="brand.teams" />
       <nav class="mt-6 flex flex-col gap-1">
         <RouterLink
