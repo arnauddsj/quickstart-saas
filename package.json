@@ -22,6 +22,8 @@
     "db:studio": "pnpm --filter server db:studio",
     "auth:schema": "pnpm --filter server auth:schema",
     "make-admin": "pnpm --filter server make-admin",
+    "init-project": "pnpm --filter server init-project",
+    "check-ready": "pnpm --filter server check-ready",
     "db:backup": "pnpm --filter server db:backup",
     "db:restore": "pnpm --filter server db:restore",
     "db:restore-check": "pnpm --filter server db:restore-check",

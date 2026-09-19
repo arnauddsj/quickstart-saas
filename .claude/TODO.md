@@ -12,6 +12,10 @@ maintained, this file is not a history.
 
 ## 1. Before the first real feature in a new project
 
+Start with `pnpm init-project`, then run `pnpm check-ready`: it reports every item below
+that lives in the repo and exits 0 once they are done. See
+[`docs/new-project.md`](../docs/new-project.md).
+
 - [ ] **Rename or delete the Projects reference feature.** It is a placeholder for the
       product's first real entity and must not ship as "Projects". Follow
       [`docs/reference-feature.md`](../docs/reference-feature.md) § Renaming it, before the
@@ -23,9 +27,9 @@ maintained, this file is not a history.
 - [ ] **Replace the example notifications.** `account.welcome` and `project.created` show
       the pattern; keep, reword or delete them, and add the product's own events. See
       [`docs/notifications.md`](../docs/notifications.md).
-- [ ] **Set the brand.** Edit `server/src/config/brand.ts`: product name, support email,
-      accent color, the workspace label, and `teams: false` for a single-user product. See
-      [`docs/branding.md`](../docs/branding.md).
+- [ ] **Check the brand `init-project` wrote.** `server/src/config/brand.ts`: product
+      name, support email, accent color, the workspace label, and `teams: false` for a
+      single-user product. See [`docs/branding.md`](../docs/branding.md).
 - [ ] **Replace the placeholder plan shape.** `server/src/config/plans.ts` ships with a
       `projects` limit (used by the reference feature) and an `exports` feature so
       `planGuard` has something to exercise. Rename them to the product's real limits and
@@ -44,6 +48,18 @@ maintained, this file is not a history.
       `VITE_GA4_ID` / `VITE_CLARITY_ID` only once the policy names them.
 
 ## 2. Backlog
+
+From the 2026-09-19 audit, deliberately deferred until a product needs them:
+
+- [ ] **Audit trail for sensitive actions.** Actor, workspace, action, target and time for
+      role, membership, billing and destructive admin changes, with a searchable view.
+      Usage analytics is not an audit history.
+- [ ] **A retryable background-job example.** One idempotent job with retries and backoff,
+      and a documented way to inspect and retry failed pg-boss jobs.
+- [ ] **Recurring features, only once two products need them:** tenant-scoped file
+      storage (S3-compatible, signed URLs), a paginated list example (Projects loads every
+      row), translation and locale-aware email, marketing pages, and further sign-in
+      methods or API keys.
 
 - [ ] **Evaluate `@better-auth/stripe` as a replacement for `services/stripe.ts`.** It
       ships organization-scoped subscriptions keyed by `referenceId`, which would delete

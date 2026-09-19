@@ -13,7 +13,7 @@ const serverEnv = envFile('./server/.env')
 const composeEnv = envFile('./.env')
 
 const apiUrl = process.env.API_URL ?? `http://localhost:${serverEnv.PORT || 3000}`
-const clientUrl = `http://localhost:${process.env.CLIENT_PORT ?? 5173}`
+const clientUrl = `http://localhost:${process.env.CLIENT_PORT ?? (composeEnv.CLIENT_PORT || 5173)}`
 process.env.MAILPIT_URL ??= `http://localhost:${composeEnv.MAILPIT_UI_PORT || 8025}`
 
 export default defineConfig({

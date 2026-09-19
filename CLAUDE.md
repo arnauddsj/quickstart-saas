@@ -26,7 +26,7 @@ belongs in a doc (see [Comments](#comments)).
 ## Development commands
 
 ```bash
-pnpm install && cp server/.env.example server/.env
+pnpm install && pnpm init-project
 docker compose up -d          # postgres + mailpit only
 pnpm dev                      # server :3000, client :5173, mail UI :8025
 pnpm typecheck                # tsc -b (server) then vue-tsc -b (client)
@@ -38,6 +38,8 @@ pnpm db:generate              # after editing server/src/db/schema/app.ts
 pnpm db:migrate               # same code that runs at boot
 pnpm auth:schema              # regenerate server/src/db/schema/auth.ts
 pnpm make-admin you@example.com   # fallback only: the first sign-up is the admin
+pnpm init-project             # once per clone: brand, .env files, ports → docs/new-project.md
+pnpm check-ready              # what is still a starter placeholder
 pnpm db:backup                # dump + row counts; db:restore-check drills it → docs/backups.md
 ```
 

@@ -5,8 +5,9 @@ import tailwindcss from '@tailwindcss/vite'
 import { sentryVitePlugin } from '@sentry/vite-plugin'
 
 const serverEnv = loadEnv('development', new URL('../server', import.meta.url).pathname, '')
+const rootEnv = loadEnv('development', new URL('..', import.meta.url).pathname, '')
 const apiUrl = process.env.API_URL ?? `http://localhost:${serverEnv.PORT || 3000}`
-const port = Number(process.env.CLIENT_PORT ?? 5173)
+const port = Number(process.env.CLIENT_PORT ?? (rootEnv.CLIENT_PORT || 5173))
 const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN
 
 const uploadSourceMaps = sentryAuthToken

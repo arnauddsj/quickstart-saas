@@ -13,7 +13,7 @@ Code: `docker-compose.yaml`, `package.json` (root scripts), `server/package.json
 nvm use                               # or any Node 24; .nvmrc says 24
 corepack enable                       # pnpm 11.27 from the packageManager field
 pnpm install
-cp server/.env.example server/.env    # defaults work as-is against the compose services
+pnpm init-project                     # brand, root .env, server/.env; see new-project.md
 docker compose up -d                  # postgres:17 + mailpit, nothing else
 pnpm dev                              # server on :3000 (migrates first), client on :5173
 ```
@@ -39,11 +39,12 @@ keep using it.
 
 ## Ports collide with other projects, and the fix is the root `.env`
 
-Every project on a laptop wants 5432, 1025 and 8025. The compose file reads
+Every project on a laptop wants 5432, 1025, 8025 and 5173. The compose file reads
 `POSTGRES_PORT`, `MAILPIT_SMTP_PORT` and `MAILPIT_UI_PORT` from the root `.env`
-(gitignored). Set them when `docker compose up` reports a bound port, and mirror the
-first two in `server/.env` (`DATABASE_URL`, `SMTP_PORT`). The container-side ports never
-change.
+(gitignored), and Vite and Playwright read `CLIENT_PORT` from it. `pnpm init-project`
+picks free ports and writes both env files consistently; by hand, set the root `.env` when
+`docker compose up` reports a bound port and mirror it in `server/.env` (`DATABASE_URL`,
+`SMTP_PORT`, `PUBLIC_URL`, `CORS_ORIGINS`). The container-side ports never change.
 
 ## `server/.env` is the one place the API port is set
 
@@ -52,9 +53,9 @@ change.
 also reads `MAILPIT_UI_PORT` from the root `.env`. They used to default to 3000 on their
 own, so moving the API to 3001 left the Vite proxy pointing at nothing: sign-in failed
 with a 502 and a generic "Could not send magic link", and nothing appeared in the
-server's log because no request ever reached it. `API_URL` and `CLIENT_PORT` still
-override both when needed. `PUBLIC_URL` and `CORS_ORIGINS` must name the port Vite
-actually serves (5173 unless `CLIENT_PORT` says otherwise).
+server's log because no request ever reached it. `API_URL` and `CLIENT_PORT` in the
+shell still override both when needed. `PUBLIC_URL` and `CORS_ORIGINS` must name the port
+Vite actually serves (5173 unless `CLIENT_PORT` says otherwise).
 
 ## What `pnpm dev` runs
 

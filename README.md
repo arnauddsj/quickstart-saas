@@ -10,10 +10,13 @@ Postgres.
 ```bash
 nvm use                               # Node 24
 corepack enable && pnpm install
-cp server/.env.example server/.env
+pnpm init-project                     # name, support email; writes brand.ts and .env files
 docker compose up -d                  # postgres + mailpit
 pnpm dev
+pnpm check-ready                      # what is still a starter placeholder
 ```
+
+`init-project` prints the ports it chose; on a machine with nothing else running they are:
 
 - App: http://localhost:5173
 - API: http://localhost:3000 (`/health`)
