@@ -43,6 +43,7 @@ It is deliberately separate from:
 | [development.md](development.md)         | Running it locally, what `docker compose up` does and does not start, and the port-collision trap                        |
 | [new-project.md](new-project.md)         | What `pnpm init-project` writes in a fresh clone, and what `pnpm check-ready` still reports as the starter's placeholder |
 | [starter-updates.md](starter-updates.md) | How starter releases are recorded, and how a product finds and applies the fixes made after it was cloned                |
+| [seeding.md](seeding.md)                 | Filling the dev database with fake data, the accounts it creates, and how a new feature adds its seeder                  |
 | [backups.md](backups.md)                 | Taking a consistent dump with row counts, restoring it, and the drill that proves a dump restores                        |
 | [deployment.md](deployment.md)           | What happens on container start, the shutdown budget, health tiers, and the Coolify settings that live outside the repo  |
 | [testing.md](testing.md)                 | What each test layer proves, how the integration database is created and reset, and which kind of spec a change needs    |

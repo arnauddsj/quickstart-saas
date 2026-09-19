@@ -21,6 +21,7 @@
     "db:migrate": "pnpm --filter server db:migrate",
     "db:studio": "pnpm --filter server db:studio",
     "auth:schema": "pnpm --filter server auth:schema",
+    "db:seed": "pnpm --filter server db:seed",
     "make-admin": "pnpm --filter server make-admin",
     "init-project": "pnpm --filter server init-project",
     "check-ready": "pnpm --filter server check-ready",

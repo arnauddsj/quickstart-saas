@@ -19,7 +19,9 @@ pnpm dev                              # server on :3000 (migrates first), client
 ```
 
 Open `http://localhost:5173`, request a link, read it at `http://localhost:8025`. Make
-yourself admin with `pnpm make-admin you@example.com` and reload.
+yourself admin with `pnpm make-admin you@example.com` and reload, or run
+`pnpm db:seed --reset` and sign in as `admin@example.com` to start from fake data; see
+[seeding.md](seeding.md).
 
 ## `docker compose up` starts only the dependencies
 

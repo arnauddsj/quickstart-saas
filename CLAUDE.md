@@ -40,6 +40,7 @@ pnpm auth:schema              # regenerate server/src/db/schema/auth.ts
 pnpm make-admin you@example.com   # fallback only: the first sign-up is the admin
 pnpm init-project             # once per clone: brand, .env files, ports → docs/new-project.md
 pnpm check-ready              # what is still a starter placeholder
+pnpm db:seed --reset          # wipe dev DB, fill it with fake data → docs/seeding.md
 pnpm db:backup                # dump + row counts; db:restore-check drills it → docs/backups.md
 ```
 
@@ -89,6 +90,8 @@ Each is a silent failure: it compiles, deploys, and breaks later.
   [`docs/error-reporting.md`](docs/error-reporting.md).
 - **`EMAIL_PROVIDER` names the sender and there is no fallback** →
   [`docs/email.md`](docs/email.md).
+- **A new table gets a seeder in `server/src/scripts/seed/`**, or it stays empty in every
+  dev database → [`docs/seeding.md`](docs/seeding.md).
 
 ## Type contract
 

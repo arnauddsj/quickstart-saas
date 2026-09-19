@@ -8,6 +8,15 @@ products** the changes a product should take even if it skips the rest.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- `pnpm db:seed [--reset]` fills the development database with deterministic fake data:
+  an admin, a PRO and a FREE workspace, members, an invitation, projects, notifications
+  and 90 days of activity. One seeder per feature in `server/src/scripts/seed/`; a new
+  table gets a seeder ([docs/seeding.md](docs/seeding.md)).
+
 ## [2.3.0] - 2026-09-19
 
 ### Added
