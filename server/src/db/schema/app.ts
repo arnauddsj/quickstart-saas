@@ -1,5 +1,5 @@
 // docs/database-and-migrations.md
-import { boolean, jsonb, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import { boolean, index, jsonb, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
 import { organization, user } from './auth.js'
 
 export const PLAN_NAMES = ['FREE', 'PRO'] as const
@@ -32,3 +32,22 @@ export const userConsent = pgTable('user_consent', {
   record: jsonb().notNull(),
   updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 })
+
+export const project = pgTable(
+  'project',
+  {
+    id: text()
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    organizationId: text()
+      .notNull()
+      .references(() => organization.id, { onDelete: 'cascade' }),
+    name: text().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index('project_organization_id_idx').on(t.organizationId)],
+)

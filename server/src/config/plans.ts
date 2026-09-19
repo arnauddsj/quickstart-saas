@@ -44,6 +44,16 @@ export function planLimit(plan: PlanName, limit: Limit): number {
   return PLANS[plan].limits[limit]
 }
 
+export function assertWithinLimit(plan: PlanName, limit: Limit, used: number): void {
+  const max = planLimit(plan, limit)
+  if (used >= max) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: `The ${PLANS[plan].label} plan allows ${max} ${limit}`,
+    })
+  }
+}
+
 export function planFromPriceId(priceId: string | null | undefined): PlanName {
   if (!priceId) return 'FREE'
   const entry = (Object.entries(PLANS) as [PlanName, (typeof PLANS)[PlanName]][]).find(

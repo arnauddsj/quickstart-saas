@@ -6,6 +6,10 @@
   "exports": {
     "./router": {
       "types": "./src/trpc/router/index.ts"
+    },
+    "./brand": {
+      "types": "./src/config/brand.ts",
+      "default": "./src/config/brand.ts"
     }
   },
   "scripts": {

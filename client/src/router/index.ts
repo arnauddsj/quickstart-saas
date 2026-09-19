@@ -16,6 +16,7 @@ export const router = createRouter({
       meta: { requiresAuth: true, requiresOrg: true },
       children: [
         { path: '', name: 'dashboard', component: () => import('@/pages/Dashboard.vue') },
+        { path: 'projects', name: 'projects', component: () => import('@/pages/Projects.vue') },
         {
           path: 'settings/organization',
           name: 'settings-organization',
