@@ -1,5 +1,6 @@
 // docs/reference-feature.md
 import { TRPCError } from '@trpc/server'
+import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { PLANS } from '../../config/plans.js'
 import { addMember, callerFor, db, resetDatabase, schema, seedOrg, seedUser } from './helpers.js'
@@ -15,7 +16,7 @@ async function code(p: Promise<unknown>) {
 
 async function world() {
   const alice = await seedUser({ email: 'alice@test.io' })
-  const carol = await seedUser({ email: 'carol@test.io' })
+  const carol = await seedUser({ email: 'carol@test.io', name: 'Carol' })
   const bob = await seedUser({ email: 'bob@test.io' })
   const orgA = await seedOrg({ name: 'A' })
   const orgB = await seedOrg({ name: 'B' })
@@ -55,6 +56,19 @@ describe('projects stay inside their workspace', () => {
     expect((await carol.project.rename({ id: alpha.id, name: 'Renamed' })).name).toBe('Renamed')
     expect(await code(carol.project.delete({ id: alpha.id }))).toBe('FORBIDDEN')
     expect(await alice.project.delete({ id: alpha.id })).toEqual({ id: alpha.id })
+  })
+})
+
+describe('who created a project', () => {
+  it('records the creator and keeps the project when that account is deleted', async () => {
+    const { alice, carol } = await world()
+    await carol.project.create({ name: 'By Carol' })
+    expect((await alice.project.list()).projects[0]?.createdBy).toBe('Carol')
+
+    await db.delete(schema.user).where(eq(schema.user.email, 'carol@test.io'))
+    const [kept] = (await alice.project.list()).projects
+    expect(kept?.name).toBe('By Carol')
+    expect(kept?.createdBy).toBeNull()
   })
 })
 

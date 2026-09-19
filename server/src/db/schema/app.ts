@@ -42,6 +42,7 @@ export const project = pgTable(
     organizationId: text()
       .notNull()
       .references(() => organization.id, { onDelete: 'cascade' }),
+    createdById: text().references(() => user.id, { onDelete: 'set null' }),
     name: text().notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true })

@@ -115,6 +115,7 @@ function submit() {
       <TableHeader>
         <TableRow>
           <TableHead>Name</TableHead>
+          <TableHead>Created by</TableHead>
           <TableHead>Created</TableHead>
           <TableHead class="text-right" />
         </TableRow>
@@ -122,6 +123,7 @@ function submit() {
       <TableBody>
         <TableRow v-for="p in rows" :key="p.id">
           <TableCell class="font-medium">{{ p.name }}</TableCell>
+          <TableCell class="text-muted-foreground">{{ p.createdBy ?? 'Former member' }}</TableCell>
           <TableCell class="text-muted-foreground">{{
             new Date(p.createdAt).toLocaleDateString()
           }}</TableCell>
