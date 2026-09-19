@@ -1,5 +1,5 @@
 // docs/analytics.md
-import { count, sql, type SQL } from 'drizzle-orm'
+import { count, eq, sql, type SQL } from 'drizzle-orm'
 import { PLANS, type Limit, type PlanName } from '../config/plans.js'
 import { db } from '../db/client.js'
 import { project } from '../db/schema/index.js'
@@ -12,17 +12,18 @@ export const NEAR_LIMIT_RATIO = 0.8
 
 export const usageCounters: Record<
   Limit,
-  () => Promise<{ organizationId: string; used: number }[]>
+  (organizationId?: string) => Promise<{ organizationId: string; used: number }[]>
 > = {
-  projects: () =>
+  projects: (organizationId) =>
     db
       .select({ organizationId: project.organizationId, used: count() })
       .from(project)
+      .where(organizationId ? eq(project.organizationId, organizationId) : undefined)
       .groupBy(project.organizationId),
 }
 
 const PLAN_OF_ORG = sql.raw(
-  `coalesce(case when s.status in ('active', 'trialing') then s.plan end, 'FREE')`,
+  `coalesce(case when s.status in ('active', 'trialing', 'past_due') then s.plan end, 'FREE')`,
 )
 
 async function rows<T>(query: SQL): Promise<T[]> {

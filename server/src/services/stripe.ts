@@ -20,8 +20,8 @@ function assertBillingConfigured() {
   }
 }
 
-const isPaying = (status: string | null) => status === 'active' || status === 'trialing'
-const hasLiveSubscription = (status: string | null) => isPaying(status) || status === 'past_due'
+const PAYING_STATUSES = new Set(['active', 'trialing', 'past_due'])
+const isPaying = (status: string | null) => status !== null && PAYING_STATUSES.has(status)
 
 export async function getOrCreateSubscription(organizationId: string) {
   const existing = await db.query.subscription.findFirst({
@@ -63,7 +63,7 @@ export async function createCheckoutSession(input: {
 }): Promise<string> {
   assertBillingConfigured()
   const current = await getOrCreateSubscription(input.organizationId)
-  if (current.stripeSubscriptionId && hasLiveSubscription(current.status)) {
+  if (current.stripeSubscriptionId && isPaying(current.status)) {
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
       message: 'This workspace already has a subscription; manage it in the billing portal',

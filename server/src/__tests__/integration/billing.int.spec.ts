@@ -7,7 +7,16 @@ import {
   getOrCreateSubscription,
   stripe,
 } from '../../services/stripe.js'
-import { db, resetDatabase, rowCount, schema, seedOrg } from './helpers.js'
+import {
+  addMember,
+  callerFor,
+  db,
+  resetDatabase,
+  rowCount,
+  schema,
+  seedOrg,
+  seedUser,
+} from './helpers.js'
 import type { App } from './helpers.js'
 
 const PERIOD_END = 1_900_000_000
@@ -72,6 +81,26 @@ describe('subscription rows', () => {
     await applyStripeSubscription(fakeSubscription(org.id, { price: 'price_unknown' }))
     expect(await planOf(org.id)).toBe('FREE')
     expect(await rowCount(schema.subscription)).toBe(1)
+  })
+
+  it('keeps the paid plan while a payment is past due, and drops it once unpaid', async () => {
+    const org = await seedOrg()
+    await applyStripeSubscription(fakeSubscription(org.id, { status: 'past_due' }))
+    expect(await planOf(org.id)).toBe('PRO')
+    await applyStripeSubscription(fakeSubscription(org.id, { status: 'unpaid' }))
+    expect(await planOf(org.id)).toBe('FREE')
+  })
+
+  it('reports usage against every limit of the plan', async () => {
+    const org = await seedOrg()
+    const owner = await seedUser()
+    await addMember(org.id, owner.id, 'owner')
+    await db.insert(schema.project).values([
+      { organizationId: org.id, name: 'A' },
+      { organizationId: org.id, name: 'B' },
+    ])
+    const sub = await callerFor(owner, { activeOrganizationId: org.id }).billing.getSubscription()
+    expect(sub.usage).toEqual([{ limit: 'projects', used: 2, max: 3 }])
   })
 
   it('ignores a subscription without organization metadata', async () => {

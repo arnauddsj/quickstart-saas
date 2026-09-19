@@ -3,7 +3,7 @@ import { createTRPCClient, httpBatchLink, httpLink, splitLink, TRPCClientError }
 import type { TRPCClient } from '@trpc/client'
 import { MutationCache, QueryCache, QueryClient, useMutation, useQuery } from '@tanstack/vue-query'
 import type { MutationOptions, QueryKey } from '@tanstack/vue-query'
-import type { MaybeRefOrGetter } from 'vue'
+import type { MaybeRef, MaybeRefOrGetter } from 'vue'
 import type { AppRouter } from 'server/router'
 import { actionHeaders, reportQueryFailure } from '@/lib/monitoring'
 
@@ -51,7 +51,7 @@ type TRPCQueryOptions = {
   enabled?: MaybeRefOrGetter<boolean | undefined>
   staleTime?: number
   gcTime?: number
-  refetchInterval?: number | false
+  refetchInterval?: MaybeRef<number | false>
   retry?: boolean | number
 }
 

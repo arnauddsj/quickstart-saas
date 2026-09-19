@@ -6,8 +6,8 @@ the plan before doing premium work.
 Code: `server/src/config/plans.ts` (`PLANS`, `planGuard`, `planLimit`,
 `planFromPriceId`), `services/stripe.ts` (`getOrCreateSubscription`,
 `createCheckoutSession`, `createPortalSession`, `applyStripeSubscription`),
-`routes/stripeWebhook.ts`, `trpc/router/billing.ts`, `db/schema/app.ts`
-(`subscription`), `client/src/pages/settings/Billing.vue`. Specs:
+`routes/stripeWebhook.ts`, `trpc/router/billing.ts`, `services/planUsage.ts`
+(`planUsage`), `db/schema/app.ts` (`subscription`), `client/src/pages/settings/Billing.vue`. Specs:
 `server/src/__tests__/plans.spec.ts`, `server/src/__tests__/integration/billing.int.spec.ts`.
 
 ## `PLANS` is the only place a limit is written
@@ -49,7 +49,13 @@ Reading the plan still works, so every organization shows `FREE`.
 `billing.createCheckout` and `billing.createPortal` run on `orgAdminProcedure`. Checkout
 sets `client_reference_id` and `subscription_data.metadata.organizationId` so the webhook
 can find the organization without a lookup table. Success and cancel URLs return to
-`${PUBLIC_URL}/settings/billing?status=…`, which the page turns into a toast.
+`${PUBLIC_URL}/settings/billing?status=…`.
+
+**The return URL is not proof of payment.** On `?status=success` the page does not claim
+success: it says Stripe is confirming, hides the upgrade button and polls
+`billing.getSubscription` every 2 seconds until the plan leaves `FREE`, then announces the
+new plan. After 60 seconds without the webhook it stops and asks the user to reload
+rather than pay again. `?status=cancelled` shows a toast.
 
 **Checkout refuses an organization that already has a live subscription.** When the row
 has a `stripeSubscriptionId` and its status is `active`, `trialing` or `past_due`,
@@ -72,8 +78,8 @@ what Stripe holds now. A late "active" event after a cancellation then applies t
 cancellation, and a replay applies the same state again.
 
 `applyStripeSubscription` maps the first line item's price id to a plan through
-`planFromPriceId` (unknown id or a status other than `active`/`trialing` means `FREE`) and
-upserts the row. It changes nothing when:
+`planFromPriceId` (unknown id or a status other than `active`, `trialing` or `past_due`
+means `FREE`) and upserts the row. It changes nothing when:
 
 - the subscription has no `organizationId` metadata;
 - the organization no longer exists. The event is acknowledged with 200; inserting would
@@ -81,8 +87,23 @@ upserts the row. It changes nothing when:
 - the row holds a different subscription that is still paying and the incoming one is not.
   An old subscription's cancellation cannot downgrade the one that replaced it.
 
-The checkout return page never writes the plan; if the webhook is late the page shows
-`FREE` for a few seconds, which is honest.
+## A past-due workspace keeps its plan while Stripe retries
+
+When a renewal payment fails, Stripe marks the subscription `past_due` and retries on the
+schedule set in the Stripe dashboard (Billing → Revenue recovery). The workspace keeps the
+paid plan during that time, and the Billing page shows owners and admins "The last payment
+failed" with a button to the portal. When the retries run out, Stripe cancels the
+subscription or marks it `unpaid`, depending on that same setting, and the webhook drops
+the workspace to `FREE`. Downgrading on the first failure punished customers for an
+expired card; the length of the grace period is now a Stripe setting, not code.
+
+## The page shows usage against each limit
+
+`billing.getSubscription` returns `usage`: for every key of the plan's `limits`, the count
+from `usageCounters` in `services/analytics.ts` (filtered to the workspace) and the
+maximum. The page draws one bar per limit. A new limit therefore needs its counter in
+`usageCounters`, which the `Record<Limit, …>` type enforces, and it appears on the Billing
+page and in admin analytics with no other change.
 
 ## The webhook needs the raw body, so it lives in its own plugin
 

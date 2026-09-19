@@ -5,6 +5,7 @@ import {
   createPortalSession,
   getOrCreateSubscription,
 } from '../../services/stripe.js'
+import { planUsage } from '../../services/planUsage.js'
 import { track } from '../../services/usage.js'
 import { orgAdminProcedure, orgProcedure, router } from '../index.js'
 
@@ -17,6 +18,7 @@ export const billingRouter = router({
       currentPeriodEnd: sub.currentPeriodEnd?.toISOString() ?? null,
       cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
       hasStripeCustomer: Boolean(sub.stripeCustomerId),
+      usage: await planUsage(ctx.organizationId, sub.plan),
     }
   }),
 
