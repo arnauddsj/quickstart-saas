@@ -110,8 +110,9 @@ business action the same way; generic click breadcrumbs cannot say what the user
 only these request headers: `user-agent`, `x-request-id` and `x-action-id`. It removes:
 
 - cookies and request bodies
-- query strings and fragments from every URL, which removes magic-link and invitation
-  tokens
+- query strings and fragments from request URLs and URLs embedded in event messages,
+  exception values, stack frame filenames, breadcrumbs and diagnostic context, which
+  removes magic-link and invitation tokens from those fields
 - everything on the user except `id`
 
 It also redacts any context key matching

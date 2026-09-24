@@ -47,4 +47,36 @@ describe('scrubEvent', () => {
       to: '/b',
     })
   })
+
+  it('removes URL secrets from free-text event fields', () => {
+    const event = scrubEvent({
+      type: undefined,
+      message: 'Failed at /verify#MESSAGE_SECRET',
+      logentry: { message: 'Failed at https://app.example/verify?token=LOG_SECRET' },
+      exception: {
+        values: [
+          {
+            type: 'Error',
+            value: 'Request failed: /verify?token=EXCEPTION_SECRET',
+            stacktrace: { frames: [{ filename: 'https://app.example/app.js?key=FRAME_SECRET' }] },
+          },
+        ],
+      },
+      tags: { route: '/verify?token=TAG_SECRET' },
+      contexts: { details: { url: '/verify?token=CONTEXT_SECRET' } },
+      breadcrumbs: [
+        {
+          message: 'Navigated to /verify?token=CRUMB_SECRET',
+          data: { note: 'See /verify?token=DATA_SECRET' },
+        },
+      ],
+    } as ErrorEvent)
+
+    expect(JSON.stringify(event)).not.toMatch(
+      /(?:MESSAGE|LOG|EXCEPTION|FRAME|TAG|CONTEXT|CRUMB|DATA)_SECRET/,
+    )
+    expect(event.exception?.values?.[0]?.value).toBe('Request failed: /verify')
+    expect(event.message).toBe('Failed at /verify')
+    expect(event.breadcrumbs?.[0]?.message).toBe('Navigated to /verify')
+  })
 })

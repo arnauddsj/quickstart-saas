@@ -3,14 +3,21 @@ import type { Breadcrumb, ErrorEvent } from '@sentry/vue'
 
 const KEPT_HEADERS = ['user-agent', 'x-request-id', 'x-action-id']
 const SECRET_KEY = /token|secret|password|authorization|cookie|key/i
+const URL_WITH_QUERY = /(?:https?:\/\/|\/)[^\s?#"'<>]*[?#][^\s"'<>]*/g
 
 export function stripQuery(url: string): string {
   const cut = url.search(/[?#]/)
   return cut === -1 ? url : url.slice(0, cut)
 }
 
+function stripUrls(value: string): string {
+  return value.replace(URL_WITH_QUERY, stripQuery)
+}
+
 function redact(value: unknown, depth = 0): unknown {
-  if (depth > 4 || value === null || typeof value !== 'object') return value
+  if (typeof value === 'string') return stripUrls(value)
+  if (value === null || typeof value !== 'object') return value
+  if (depth > 8) return '[redacted]'
   if (Array.isArray(value)) return value.map((v) => redact(v, depth + 1))
   return Object.fromEntries(
     Object.entries(value).map(([k, v]) => [
@@ -34,6 +41,10 @@ export function scrubEvent<T extends ErrorEvent>(event: T): T {
     }
   }
   if (event.user) event.user = event.user.id === undefined ? {} : { id: event.user.id }
+  if (event.message) event.message = stripUrls(event.message)
+  if (event.logentry) event.logentry = redact(event.logentry) as T['logentry']
+  if (event.exception) event.exception = redact(event.exception) as T['exception']
+  if (event.tags) event.tags = redact(event.tags) as T['tags']
   if (event.contexts) event.contexts = redact(event.contexts) as T['contexts']
   if (event.extra) event.extra = redact(event.extra) as T['extra']
   if (event.breadcrumbs) event.breadcrumbs = event.breadcrumbs.map(scrubBreadcrumb)
@@ -47,5 +58,5 @@ export function scrubBreadcrumb(crumb: Breadcrumb): Breadcrumb {
       if (typeof data[key] === 'string') data[key] = stripQuery(data[key])
     }
   }
-  return { ...crumb, data }
+  return { ...crumb, message: crumb.message ? stripUrls(crumb.message) : crumb.message, data }
 }

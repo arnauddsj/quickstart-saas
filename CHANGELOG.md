@@ -10,6 +10,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follo
 
 ## [Unreleased]
 
+### Fixed
+
+- GlitchTip event scrubbing removes query strings and fragments from URLs embedded in
+  exception messages, stack frames, breadcrumbs, and diagnostic context.
+
 ### Added
 
 - Optional local GlitchTip: `docker compose --profile glitchtip up -d` starts it on
