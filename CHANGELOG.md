@@ -12,6 +12,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follo
 
 ### Added
 
+- Optional local GlitchTip: `docker compose --profile glitchtip up -d` starts it on
+  `127.0.0.1:8100` with its own Postgres, mail through Mailpit. Plain `docker compose up -d`
+  is unchanged. Its MCP server is enabled for agents
+  ([docs/development.md](docs/development.md)).
 - `pnpm db:seed [--reset]` fills the development database with deterministic fake data:
   an admin, a PRO and a FREE workspace, members, an invitation, projects, notifications
   and 90 days of activity. One seeder per feature in `server/src/scripts/seed/`; a new

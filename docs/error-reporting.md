@@ -19,7 +19,8 @@ it caused land in the same issue (see below). Environments are separated by
 Alerting is configured in GlitchTip, not in code. Each project has an alert rule on new
 issues with two recipients, a Discord webhook and email. There is no transport in the app
 and no fallback. With no DSN set, the SDKs are inert: dev, tests and an unconfigured
-staging send nothing.
+staging send nothing. To see events locally, run the opt-in GlitchTip profile; see
+[development.md](development.md#local-error-tracking-is-opt-in).
 
 The admin nav links to GlitchTip when `VITE_GLITCHTIP_URL` is set. The app has no error
 table: `error_log` was dropped in migration `0002` when the tracker moved out.

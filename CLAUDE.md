@@ -28,6 +28,7 @@ belongs in a doc (see [Comments](#comments)).
 ```bash
 pnpm install && pnpm init-project
 docker compose up -d          # postgres + mailpit only
+docker compose --profile glitchtip up -d   # optional local GlitchTip on :8100 → docs/development.md
 pnpm dev                      # server :3000, client :5173, mail UI :8025
 pnpm typecheck                # tsc -b (server) then vue-tsc -b (client)
 pnpm lint && pnpm format:check

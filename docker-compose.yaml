@@ -28,5 +28,42 @@ services:
       timeout: 5s
       retries: 10
 
+  glitchtip-postgres:
+    profiles: [glitchtip]
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: glitchtip
+      POSTGRES_PASSWORD: glitchtip
+      POSTGRES_DB: glitchtip
+    volumes:
+      - glitchtip_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U glitchtip -d glitchtip']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  glitchtip:
+    profiles: [glitchtip]
+    image: glitchtip/glitchtip:6
+    depends_on:
+      glitchtip-postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:${GLITCHTIP_PORT:-8100}:8000'
+    environment:
+      SERVER_ROLE: all_in_one
+      DATABASE_URL: postgres://glitchtip:glitchtip@glitchtip-postgres:5432/glitchtip
+      VALKEY_URL: ''
+      SECRET_KEY: dev-only-glitchtip-secret-key-not-for-production
+      GLITCHTIP_DOMAIN: http://localhost:${GLITCHTIP_PORT:-8100}
+      DEFAULT_FROM_EMAIL: glitchtip@localhost
+      EMAIL_URL: smtp://mailpit:1025
+      GLITCHTIP_ENABLE_LOGS: 'False'
+      GLITCHTIP_ENABLE_MCP: 'True'
+
 volumes:
   postgres_data:
+  glitchtip_data:
