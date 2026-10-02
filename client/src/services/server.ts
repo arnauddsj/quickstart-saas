@@ -28,7 +28,8 @@ export const trpc: TRPCClient<AppRouter> = createTRPCClient<AppRouter>({
 
 function isRateLimited(error: unknown): boolean {
   if (error instanceof TRPCClientError) {
-    const status = error.data?.httpStatus
+    const response = error.meta?.response
+    const status = error.data?.httpStatus ?? (response instanceof Response ? response.status : 0)
     if (status === 429) return true
   }
   return error instanceof Error && /rate limit/i.test(error.message)

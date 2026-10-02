@@ -74,10 +74,23 @@ is no session and the guard sends the visitor to sign in. An `error` (429, 502, 
 down) means the check failed, and the guard keeps the user where they are with a
 "Could not reach the server" toast. `AuthCallback.vue` makes the same distinction for its
 message. Treating both as "no session" is what turned a rate limit into a fake logout;
-any new code that reads the session must keep the two apart.
+any new code that reads the session must keep the two apart. The same holds for the
+guard's `organization.list()`: an error there is not "no organization", and must not send
+the user to onboarding.
 
-`AuthCallback.vue` only follows a `redirect` that starts with a single `/`, so a crafted
-link cannot send someone to another site after they sign in.
+**On the first load there is no page to keep the user on.** A tab opened or reloaded while
+the API restarts (Vite reloads every tab when `pnpm dev` restarts, before migrations
+finish) would stay blank. So the first navigation retries with a "Reconnecting to the
+server…" toast, backing off to every 5 s, and continues once the API answers. It retries
+only a gateway failure (no status, 502, 503, 504): a 429 or any other rejection shows the
+"Could not reach the server" toast at once, so a rate limit never feeds its own retry loop.
+
+**`/login` is `guestOnly`.** A visitor who already has a session is sent on to its
+`redirect` or the dashboard, including when the page was opened during an outage and the
+API comes back.
+
+`AuthCallback.vue` and the `guestOnly` redirect only follow a `redirect` that starts with a
+single `/`, so a crafted link cannot send someone to another site after they sign in.
 
 ## tRPC mutations check `Origin` themselves
 

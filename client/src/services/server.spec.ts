@@ -14,6 +14,10 @@ function trpcError(httpStatus: number) {
 describe('query retry policy', () => {
   it('never retries a rate-limited request', () => {
     expect(retry(0, trpcError(429))).toBe(false)
+    const fastify429 = new TRPCClientError('Too Many Requests', {
+      meta: { response: new Response(null, { status: 429 }) },
+    } as never)
+    expect(retry(0, fastify429)).toBe(false)
     expect(retry(0, new Error('Rate limit exceeded, retry in 1 minute'))).toBe(false)
   })
 

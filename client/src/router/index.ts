@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, START_LOCATION } from 'vue-router'
 import type { RouteLocationNormalized } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { authClient } from '@/lib/auth'
@@ -64,7 +64,12 @@ export const router = createRouter({
       path: '/',
       component: () => import('@/layouts/AuthLayout.vue'),
       children: [
-        { path: 'login', name: 'login', component: () => import('@/pages/Login.vue') },
+        {
+          path: 'login',
+          name: 'login',
+          component: () => import('@/pages/Login.vue'),
+          meta: { guestOnly: true },
+        },
         {
           path: 'privacy',
           name: 'privacy',
@@ -116,16 +121,46 @@ export const router = createRouter({
   ],
 })
 
-router.beforeEach(async (to) => {
+const UNREACHABLE = 'Could not reach the server. Try again in a moment.'
+const RECONNECTING_TOAST = 'reconnecting'
+
+const GATEWAY_DOWN = [0, 502, 503, 504]
+
+async function untilReachable<T extends { error: { status?: number } | null }>(
+  call: () => Promise<T>,
+): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    const result = await call()
+    if (!result.error || !GATEWAY_DOWN.includes(result.error.status ?? 0)) {
+      toast.dismiss(RECONNECTING_TOAST)
+      return result
+    }
+    toast.loading('Reconnecting to the server…', { id: RECONNECTING_TOAST })
+    await new Promise((resolve) => setTimeout(resolve, Math.min(1000 * 2 ** attempt, 5000)))
+  }
+}
+
+function afterSignIn(redirect: unknown): string {
+  return typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')
+    ? redirect
+    : '/'
+}
+
+router.beforeEach(async (to, from) => {
   if (!brand.teams && to.matched.some((r) => r.meta.requiresTeams)) return { name: 'dashboard' }
   const requiresAuth = to.matched.some((r) => r.meta.requiresAuth)
-  if (!requiresAuth) return true
+  const guestOnly = to.matched.some((r) => r.meta.guestOnly)
+  if (!requiresAuth && !guestOnly) return true
 
-  const { data, error } = await authClient.getSession()
+  const ask = <T extends { error: { status?: number } | null }>(call: () => Promise<T>) =>
+    from === START_LOCATION ? untilReachable(call) : call()
+
+  const { data, error } = await ask(() => authClient.getSession())
   if (error) {
-    toast.error('Could not reach the server. Try again in a moment.')
+    toast.error(UNREACHABLE)
     return false
   }
+  if (guestOnly) return data ? afterSignIn(to.query.redirect) : true
   if (!data) return { name: 'login', query: { redirect: to.fullPath } }
   setMonitoringUser(data.user.id)
 
@@ -134,7 +169,11 @@ router.beforeEach(async (to) => {
 
   const requiresOrg = to.matched.some((r) => r.meta.requiresOrg)
   if (requiresOrg && !data.session.activeOrganizationId) {
-    const orgs = await authClient.organization.list()
+    const orgs = await ask(() => authClient.organization.list())
+    if (orgs.error) {
+      toast.error(UNREACHABLE)
+      return false
+    }
     const first = orgs.data?.[0]
     if (!first) return { name: 'onboarding' }
     await authClient.organization.setActive({ organizationId: first.id })
@@ -158,6 +197,7 @@ router.onError((error: unknown, to: RouteLocationNormalized) => {
 declare module 'vue-router' {
   interface RouteMeta {
     requiresAuth?: boolean
+    guestOnly?: boolean
     requiresAdmin?: boolean
     requiresOrg?: boolean
     requiresTeams?: boolean

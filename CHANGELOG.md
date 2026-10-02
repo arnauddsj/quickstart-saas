@@ -12,6 +12,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follo
 
 ### Fixed
 
+- Reloading during an API restart no longer leaves a blank page: the first navigation
+  retries with a "Reconnecting" toast until the server answers (gateway errors only; a
+  429 is never retried). A signed-in visitor on
+  `/login` is sent to the app, and a failed organization lookup no longer sends the user
+  to onboarding ([docs/auth.md](docs/auth.md)).
 - GlitchTip event scrubbing removes query strings and fragments from URLs embedded in
   exception messages, stack frames, breadcrumbs, and diagnostic context.
 

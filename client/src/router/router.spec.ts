@@ -8,7 +8,12 @@ const authClient = vi.hoisted(() => ({
 }))
 vi.mock('@/lib/auth', () => ({ authClient }))
 
-const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }))
+const toast = vi.hoisted(() => ({
+  error: vi.fn(),
+  success: vi.fn(),
+  loading: vi.fn(),
+  dismiss: vi.fn(),
+}))
 vi.mock('vue-sonner', () => ({ toast }))
 
 const { router } = await import('./index')
@@ -41,6 +46,7 @@ describe('route guard', () => {
   })
 
   it('serves the legal pages without asking for a session', async () => {
+    authClient.getSession.mockClear()
     expect((await go('/privacy')).name).toBe('privacy')
     expect((await go('/legal')).name).toBe('legal')
     expect((await go('/terms')).name).toBe('terms')
@@ -80,6 +86,64 @@ describe('route guard', () => {
     })
     expect((await go('/settings/account')).name).toBe('settings-billing')
     expect(toast.error).toHaveBeenCalledWith('Could not reach the server. Try again in a moment.')
+  })
+
+  it('sends a signed-in visitor away from the login page', async () => {
+    signedIn('member', 'o1')
+    await go('/privacy')
+    expect((await go('/login')).name).toBe('dashboard')
+    expect((await go('/login?redirect=/settings/billing')).name).toBe('settings-billing')
+    expect((await go('/login?redirect=//evil.example')).name).toBe('dashboard')
+  })
+
+  it('does not treat a failed organization lookup as having none', async () => {
+    signedIn('member', 'o1')
+    expect((await go('/settings/billing')).name).toBe('settings-billing')
+    signedIn('member', null)
+    authClient.organization.list.mockResolvedValue({ data: null, error: { status: 502 } })
+    expect((await go('/projects')).name).toBe('settings-billing')
+    expect(toast.error).toHaveBeenCalledWith('Could not reach the server. Try again in a moment.')
+  })
+
+  it('waits for the server on the first load instead of leaving a blank page', async () => {
+    vi.resetModules()
+    const { router: fresh } = await import('./index')
+    vi.useFakeTimers()
+    try {
+      authClient.getSession.mockClear()
+      signedIn('member', 'o1')
+      authClient.getSession
+        .mockResolvedValueOnce({ data: null, error: { status: 502 } })
+        .mockResolvedValueOnce({ data: null, error: { status: 502 } })
+      const landing = fresh.push('/settings/account')
+      await vi.advanceTimersByTimeAsync(3000)
+      await landing
+      expect(fresh.currentRoute.value.name).toBe('settings-account')
+      expect(authClient.getSession).toHaveBeenCalledTimes(3)
+      expect(toast.loading).toHaveBeenCalled()
+      expect(toast.dismiss).toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not keep reconnecting when the first load is rate limited', async () => {
+    vi.resetModules()
+    const { router: fresh } = await import('./index')
+    signedIn('member', null)
+    authClient.organization.list.mockResolvedValue({ data: null, error: { status: 429 } })
+    await fresh.push('/projects')
+    expect(authClient.organization.list).toHaveBeenCalledTimes(1)
+    expect(toast.loading).not.toHaveBeenCalled()
+    expect(toast.error).toHaveBeenCalledWith('Could not reach the server. Try again in a moment.')
+
+    vi.resetModules()
+    const { router: again } = await import('./index')
+    authClient.getSession.mockClear()
+    authClient.getSession.mockResolvedValue({ data: null, error: { status: 429 } })
+    await again.push('/settings/account')
+    expect(authClient.getSession).toHaveBeenCalledTimes(1)
+    expect(toast.loading).not.toHaveBeenCalled()
   })
 
   it('does not require an organization on onboarding itself', async () => {
