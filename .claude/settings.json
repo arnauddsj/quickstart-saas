@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm install*)",
+      "Bash(pnpm lint*)",
+      "Bash(pnpm format*)",
+      "Bash(pnpm typecheck*)",
+      "Bash(pnpm test*)",
+      "Bash(pnpm build*)",
+      "Bash(pnpm db:generate*)",
+      "Bash(pnpm --filter *)",
+      "Bash(pnpm exec vitest*)",
+      "Bash(pnpm exec tsc*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(docker compose ps*)",
+      "Bash(docker compose logs*)",
+      "Bash(docker compose up -d postgres*)",
+      "Bash(docker compose up -d mailpit*)",
+      "Bash(curl -s http://localhost:*)",
+      "Bash(grep *)",
+      "Bash(find *)",
+      "Bash(ls *)"
+    ],
+    "deny": ["Read(./server/.env)", "Read(./.env)", "Bash(git push --force*)"]
+  }
+}

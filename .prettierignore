@@ -1,0 +1,8 @@
+node_modules
+dist
+pnpm-lock.yaml
+server/drizzle
+client/src/components/ui
+playwright-report
+test-results
+GATES.md

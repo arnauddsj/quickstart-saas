@@ -1,0 +1,57 @@
+# This workflow is load-bearing, not decoration.
+# Vite strips types without checking them, so a green `vite build` proves nothing about
+# the client/server contract. `pnpm typecheck` compiles the server first (the client
+# typechecks AppRouter through a TypeScript project reference), then the client.
+# Order: install → lint → format → typecheck → unit tests → integration tests (throwaway
+# database on the service Postgres) → client bundle → E2E → images.
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: quickstart
+          POSTGRES_DB: quickstart
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 10
+      mailpit:
+        image: axllent/mailpit:v1.31.1
+        ports: ['1025:1025', '8025:8025']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm test:integration
+        env:
+          TEST_DATABASE_URL: postgresql://admin:quickstart@localhost:5432/quickstart
+      - run: pnpm --filter client build:image
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+        env:
+          DATABASE_URL: postgresql://admin:quickstart@localhost:5432/quickstart
+          SMTP_HOST: localhost
+          SMTP_PORT: '1025'
+          MAILPIT_URL: http://localhost:8025
+      - run: docker build -f server/Dockerfile -t quickstart-server .
+      - run: docker build -f client/Dockerfile -t quickstart-client .
