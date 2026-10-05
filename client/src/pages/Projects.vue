@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // docs/reference-feature.md
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { FolderKanban, Plus } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 import { errorMessage, queryClient, trpc, useTRPCMutation, useTRPCQuery } from '@/services/server'
@@ -34,6 +35,13 @@ const canDelete = computed(
   () => org.data.value?.myRole === 'owner' || org.data.value?.myRole === 'admin',
 )
 const rows = computed(() => projects.data.value?.projects ?? [])
+const route = useRoute()
+const focused = computed(() => route.query.project)
+watch([rows, focused], async () => {
+  if (typeof focused.value !== 'string') return
+  await nextTick()
+  document.getElementById(`project-${focused.value}`)?.scrollIntoView({ block: 'center' })
+})
 const atLimit = computed(() => {
   const data = projects.data.value
   return data ? data.projects.length >= data.limit : false
@@ -121,7 +129,12 @@ function submit() {
         </TableRow>
       </TableHeader>
       <TableBody>
-        <TableRow v-for="p in rows" :key="p.id">
+        <TableRow
+          v-for="p in rows"
+          :id="`project-${p.id}`"
+          :key="p.id"
+          :data-state="p.id === focused ? 'selected' : undefined"
+        >
           <TableCell class="font-medium">{{ p.name }}</TableCell>
           <TableCell class="text-muted-foreground">{{ p.createdBy ?? 'Former member' }}</TableCell>
           <TableCell class="text-muted-foreground">{{

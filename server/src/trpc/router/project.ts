@@ -69,7 +69,7 @@ export const projectRouter = router({
       {
         type: 'project.created',
         title: `${ctx.user.name || ctx.user.email} created ${input.name}`,
-        link: '/projects',
+        link: `/projects?project=${row.id}`,
       },
       { exceptUserId: ctx.user.id },
     ).catch((err: unknown) =>

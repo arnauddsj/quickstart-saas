@@ -31,7 +31,7 @@ export const notifications: Seeder = {
             organizationId: p.organizationId,
             type: 'project.created',
             title: `${creator?.name ?? 'Someone'} created ${p.name}`,
-            link: '/projects',
+            link: `/projects?project=${p.id}`,
             readAt: i < UNREAD ? null : p.createdAt,
             createdAt: p.createdAt,
           }

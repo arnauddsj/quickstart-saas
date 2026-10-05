@@ -22,6 +22,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follo
 
 ### Added
 
+- Notifications link to the specific thing they are about, and the bell shows a small
+  _View_ link on those rows. `project.created` now links to `/projects?project=<id>`,
+  which scrolls to and highlights that project
+  ([docs/notifications.md](docs/notifications.md)).
 - Optional local GlitchTip: `docker compose --profile glitchtip up -d` starts it on
   `127.0.0.1:8100` with its own Postgres, mail through Mailpit. Plain `docker compose up -d`
   is unchanged. Its MCP server is enabled for agents

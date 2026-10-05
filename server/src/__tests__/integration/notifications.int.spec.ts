@@ -67,9 +67,13 @@ describe('who sees a notification', () => {
 describe('example triggers', () => {
   it('notifies the other members when a project is created, not the creator', async () => {
     const { alice, carol, orgA } = await world()
-    await callerFor(alice, { activeOrganizationId: orgA.id }).project.create({ name: 'Alpha' })
+    const alpha = await callerFor(alice, { activeOrganizationId: orgA.id }).project.create({
+      name: 'Alpha',
+    })
     const forCarol = await callerFor(carol, { activeOrganizationId: orgA.id }).notification.list()
-    expect(forCarol.items.map((n) => [n.type, n.link])).toEqual([['project.created', '/projects']])
+    expect(forCarol.items.map((n) => [n.type, n.link])).toEqual([
+      ['project.created', `/projects?project=${alpha.id}`],
+    ])
     expect(forCarol.items[0]?.title).toContain('Alpha')
     const forAlice = await callerFor(alice, { activeOrganizationId: orgA.id }).notification.list()
     expect(forAlice.items).toEqual([])

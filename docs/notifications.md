@@ -24,8 +24,10 @@ await notifyWorkspace(ctx.organizationId, { type, title, link }, { exceptUserId:
     never as display text.
   - `title` is the line shown in the bell.
   - `body` is optional.
-  - `link` is an in-app path the bell navigates to. Pass only paths built on the server,
-    never a URL a user supplied.
+  - `link` is an in-app path to the specific thing the notification is about, not to the
+    list it lives in: `/projects?project=<id>`, not `/projects`. The bell shows a small
+    _View_ link on rows that have one. Pass only paths built on the server, never a URL a
+    user supplied.
 - **Workspace scoping.** `notify` without `organizationId` is personal: it shows in
   every workspace. With one, it shows only while that workspace is active. So
   `notifyWorkspace` rows never leak a link into the wrong workspace's data.
@@ -46,7 +48,8 @@ The bell polls it every 30 seconds, and any mutation invalidates the `['notifica
 key. Polling is the whole transport. Switch to server-sent events only when 30 seconds
 becomes a product problem; the router does not change.
 
-`markRead` only touches the caller's own row, so a guessed id does nothing.
+Clicking a row marks it read, then follows its `link` if it has one. `markRead` only
+touches the caller's own row, so a guessed id does nothing.
 `markAllRead` clears only what the active workspace shows.
 
 ## Retention
@@ -61,5 +64,6 @@ its notifications.
   `auth/index.ts`. A failure there is reported, not thrown, so it can never block a
   sign-up.
 - `project.created` is sent to the other members of the workspace from
-  `project.create`. It goes with the [reference feature](reference-feature.md): rename
+  `project.create`. Its link, `/projects?project=<id>`, scrolls to and highlights that
+  row. It goes with the [reference feature](reference-feature.md): rename
   or delete it with Projects. In solo mode no other member exists, so it never fires.

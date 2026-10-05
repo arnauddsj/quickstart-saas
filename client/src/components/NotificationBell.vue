@@ -2,7 +2,7 @@
 // docs/notifications.md
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Bell } from '@lucide/vue'
+import { ArrowRight, Bell } from '@lucide/vue'
 import { queryClient, trpc, useTRPCMutation, useTRPCQuery } from '@/services/server'
 import type { AppNotification } from '@/types/api'
 import { Button } from '@/components/ui/button'
@@ -93,7 +93,13 @@ async function open(n: AppNotification) {
           {{ n.title }}
         </span>
         <span v-if="n.body" class="text-xs text-muted-foreground">{{ n.body }}</span>
-        <span class="text-xs text-muted-foreground">{{ ago(n.createdAt) }}</span>
+        <span class="flex w-full items-center justify-between text-xs text-muted-foreground">
+          {{ ago(n.createdAt) }}
+          <span v-if="n.link" class="flex items-center gap-1 font-medium text-primary">
+            View
+            <ArrowRight class="size-3" />
+          </span>
+        </span>
       </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>

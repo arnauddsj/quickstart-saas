@@ -31,7 +31,7 @@ const unreadItem = {
   type: 'project.created',
   title: 'Ada created Alpha',
   body: null,
-  link: '/projects',
+  link: '/projects?project=p1',
   read: false,
   createdAt: now,
 }
@@ -58,11 +58,26 @@ describe('NotificationBell', () => {
     trpc.notification.list.query.mockResolvedValue({ unread: 1, items: [unreadItem] })
     const wrapper = await render()
     expect(wrapper.find('button').attributes('aria-label')).toBe('Notifications, 1 unread')
+    expect(wrapper.find('[data-menu-item]').text()).toContain('View')
 
     await wrapper.find('[data-menu-item]').trigger('click')
     await flushPromises()
     expect(trpc.notification.markRead.mutate).toHaveBeenCalledWith({ id: 'n1' })
-    expect(push).toHaveBeenCalledWith('/projects')
+    expect(push).toHaveBeenCalledWith('/projects?project=p1')
+  })
+
+  it('marks a notification without a link read and shows no link', async () => {
+    trpc.notification.list.query.mockResolvedValue({
+      unread: 1,
+      items: [{ ...unreadItem, link: null }],
+    })
+    const wrapper = await render()
+    expect(wrapper.find('[data-menu-item]').text()).not.toContain('View')
+
+    await wrapper.find('[data-menu-item]').trigger('click')
+    await flushPromises()
+    expect(trpc.notification.markRead.mutate).toHaveBeenCalledWith({ id: 'n1' })
+    expect(push).not.toHaveBeenCalled()
   })
 
   it('says so when there is nothing, and hides the badge', async () => {
